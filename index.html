@@ -2,14 +2,413 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>JS 수박게임</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JS 수박 게임 - 커스텀 영역</title>
     <style>
-        body { margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #f0f0f0; }
-        canvas { box-shadow: 0 0 20px rgba(0,0,0,0.2); }
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #1a1a1a;
+            overflow: hidden;
+            font-family: 'Pretendard', sans-serif;
+            touch-action: none;
+        }
+
+        #game-container {
+            position: relative;
+            width: 400px; /* 전체 배경 너비 */
+            height: 600px; /* 전체 배경 높이 */
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.7);
+            border: 4px solid #333;
+            border-radius: 12px;
+            overflow: hidden;
+            background-color: #ffeeb0;
+            
+            /* 배경 이미지 설정 */
+            background-image: url('asset/background.png');
+            background-size: 100% 100%;
+            background-position: center;
+            background-repeat: no-repeat;
+            
+            cursor: pointer;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        #ui-layer {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #fff;
+            pointer-events: none;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            z-index: 5;
+        }
+
+        .score-board {
+            font-size: 28px;
+            font-weight: 800;
+        }
+
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.85);
+            color: white;
+            padding: 40px;
+            text-align: center;
+            border-radius: 20px;
+            display: none;
+            z-index: 10;
+            min-width: 250px;
+        }
+
+        button {
+            margin-top: 20px;
+            padding: 12px 24px;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            background: #4CAF50;
+            border: none;
+            color: white;
+            border-radius: 8px;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #45a049;
+        }
     </style>
 </head>
 <body>
+
+    <div id="game-container">
+        <div id="ui-layer">
+            <div class="score-board">SCORE: <span id="score">0</span></div>
+        </div>
+        <div id="game-over" class="game-over">
+            <h1>GAME OVER</h1>
+            <p>최종 점수: <span id="final-score">0</span></p>
+            <button onclick="location.reload()">다시 도전</button>
+        </div>
+    </div>
+
+    <!-- Matter.js 라이브러리 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
-    <script src="main.js"></script>
+
+    <script>
+        const { Engine, Render, Runner, Bodies, Composite, Events, Body, World } = Matter;
+
+        // --- 전체 컨테이너 크기 (CSS와 동일하게 맞춤) ---
+        const CONTAINER_WIDTH = 400;
+        const CONTAINER_HEIGHT = 600;
+
+        // --- [설정] 실제 게임 플레이 영역 (픽셀 단위) ---
+        // 이 값을 수정하여 과일이 들어갈 위치와 크기를 제한할 수 있습니다.
+        const GAME_AREA = {
+            x: 0,       // 시작 x 좌표 (예: 20으로 하면 왼쪽 여백 생김)
+            y: 0,       // 시작 y 좌표
+            width: 400, // 게임 영역 너비 (예: 360으로 하면 좁아짐)
+            height: 600 // 게임 영역 높이 (예: 500으로 하면 바닥이 올라옴)
+        };
+        
+        // 과일 데이터 (반지름 기준)
+        const FRUIT_TYPES = [
+            { radius: 20, score: 2 },   // 1단계: 지름 40px
+            { radius: 30, score: 4 },   // 2단계: 지름 60px
+            { radius: 45, score: 8 },   // 3단계: 지름 90px
+            { radius: 55, score: 16 },  // 4단계: 지름 110px
+            { radius: 70, score: 32 },  // 5단계: 지름 140px
+            { radius: 85, score: 64 },  // 6단계: 지름 170px
+            { radius: 100, score: 128 }, // 7단계: 지름 200px
+            { radius: 120, score: 256 }, // 8단계: 지름 240px
+            { radius: 140, score: 512 }, // 9단계: 지름 280px
+            { radius: 160, score: 1024 },// 10단계: 지름 320px
+            { radius: 190, score: 2048 } // 11단계: 지름 380px (수박)
+        ];
+
+        let score = 0;
+        let isGameOver = false;
+        let currentFruit = null;
+        let canDrop = true;
+        let mergeQueue = []; 
+
+        // --- 오디오 컨텍스트 (효과음) ---
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playPopSound() {
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(400, audioCtx.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(600, audioCtx.currentTime + 0.1);
+
+            gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            oscillator.start();
+            oscillator.stop(audioCtx.currentTime + 0.1);
+        }
+
+        // --- 엔진 초기화 ---
+        const engine = Engine.create();
+        const world = engine.world;
+        const container = document.getElementById('game-container');
+
+        const render = Render.create({
+            element: container,
+            engine: engine,
+            options: {
+                width: CONTAINER_WIDTH,
+                height: CONTAINER_HEIGHT,
+                wireframes: false,
+                background: 'transparent' // CSS 배경 이미지 사용
+            }
+        });
+
+        container.style.backgroundImage = "url('asset/background.png')";
+        container.style.backgroundSize = "cover";
+
+        // --- 벽 생성 (GAME_AREA 기준) ---
+        const wallThickness = 60; // 벽 두께 (화면 밖으로 숨김)
+        const wallOptions = { isStatic: true, render: { visible: false } }; // visible: true로 하면 실제 게임 영역 확인 가능
+
+        // 바닥 (GAME_AREA의 하단)
+        const ground = Bodies.rectangle(
+            GAME_AREA.x + GAME_AREA.width / 2, 
+            GAME_AREA.y + GAME_AREA.height + (wallThickness / 2), 
+            GAME_AREA.width, 
+            wallThickness, 
+            wallOptions
+        );
+        // 왼쪽 벽 (GAME_AREA의 왼쪽)
+        const leftWall = Bodies.rectangle(
+            GAME_AREA.x - (wallThickness / 2), 
+            GAME_AREA.y + GAME_AREA.height / 2, 
+            wallThickness, 
+            GAME_AREA.height, 
+            wallOptions
+        );
+        // 오른쪽 벽 (GAME_AREA의 오른쪽)
+        const rightWall = Bodies.rectangle(
+            GAME_AREA.x + GAME_AREA.width + (wallThickness / 2), 
+            GAME_AREA.y + GAME_AREA.height / 2, 
+            wallThickness, 
+            GAME_AREA.height, 
+            wallOptions
+        );
+        // 상단 센서 (GAME_AREA 상단 + 여유분 100px 아래)
+        const topSensorY = GAME_AREA.y + 100;
+        const topSensor = Bodies.rectangle(
+            GAME_AREA.x + GAME_AREA.width / 2, 
+            topSensorY, 
+            GAME_AREA.width, 
+            2, 
+            { 
+                isStatic: true, 
+                isSensor: true, 
+                label: 'topLine',
+                render: { fillStyle: 'rgba(255, 0, 0, 0.1)' } 
+            }
+        );
+
+        Composite.add(world, [ground, leftWall, rightWall, topSensor]);
+
+        // --- 과일 생성 함수 ---
+        function createFruit(x, y, level, isStatic = false) {
+            const type = FRUIT_TYPES[level - 1];
+            
+            // 파일명: fruit00.png, fruit01.png ...
+            const indexStr = String(level - 1).padStart(2, '0');
+            const texturePath = `asset/fruit${indexStr}.png`;
+
+            // 이미지 크기가 과일 크기와 동일하다고 가정 (scale = 1.0)
+            const scale = 1.0;
+
+            const fruit = Bodies.circle(x, y, type.radius, {
+                label: `fruit_${level}`,
+                isStatic: isStatic,
+                restitution: 0.3, // 탄성
+                friction: 0.1,    // 마찰
+                render: {
+                    sprite: {
+                        texture: texturePath,
+                        xScale: scale,
+                        yScale: scale
+                    }
+                }
+            });
+            fruit.isMerging = false; // 합성 중복 방지 플래그
+            return fruit;
+        }
+
+        // --- 대기 과일 생성 ---
+        function spawnFruit() {
+            if (isGameOver) return;
+            // 초기 생성은 1~3단계 중 랜덤
+            const level = Math.floor(Math.random() * 3) + 1;
+            
+            // 생성 위치: GAME_AREA의 가로 중앙, 상단(y) + 50px
+            const spawnX = GAME_AREA.x + GAME_AREA.width / 2;
+            const spawnY = GAME_AREA.y + 50;
+            
+            currentFruit = createFruit(spawnX, spawnY, level, true);
+            Composite.add(world, currentFruit);
+            canDrop = true;
+        }
+
+        // --- 입력 처리 핸들러 ---
+        const handleMove = (e) => {
+            if (!currentFruit || isGameOver) return;
+            
+            const rect = render.canvas.getBoundingClientRect();
+            let clientX;
+            
+            if (e.type.startsWith('touch')) {
+                clientX = e.touches[0].clientX;
+            } else {
+                clientX = e.clientX;
+            }
+
+            if (clientX === undefined) return;
+
+            let x = clientX - rect.left;
+            
+            const level = parseInt(currentFruit.label.split('_')[1]);
+            const radius = FRUIT_TYPES[level - 1].radius;
+            
+            // 이동 제한: GAME_AREA 내부로 한정
+            const minX = GAME_AREA.x + radius;
+            const maxX = GAME_AREA.x + GAME_AREA.width - radius;
+
+            if (x < minX) x = minX;
+            if (x > maxX) x = maxX;
+
+            // y좌표 고정 (게임 영역 상단 + 50)
+            Body.setPosition(currentFruit, { x: x, y: GAME_AREA.y + 50 });
+        };
+
+        const handleDrop = (e) => {
+            if (e && e.cancelable) e.preventDefault();
+            
+            if (!currentFruit || !canDrop || isGameOver) return;
+            
+            // 사운드 컨텍스트 활성화 (브라우저 정책)
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            
+            canDrop = false;
+            
+            // 물리 활성화
+            Body.setStatic(currentFruit, false);
+            currentFruit = null;
+
+            // 1초 뒤 다음 과일 스폰
+            setTimeout(() => {
+                spawnFruit();
+            }, 1000);
+        };
+
+        window.addEventListener('mousemove', handleMove);
+        window.addEventListener('touchmove', handleMove, { passive: false });
+        window.addEventListener('mousedown', (e) => { if(e.button === 0) handleDrop(e); });
+        window.addEventListener('touchend', handleDrop);
+
+        // --- 충돌 및 합성 로직 ---
+        Events.on(engine, 'collisionStart', (event) => {
+            event.pairs.forEach((pair) => {
+                const bodyA = pair.bodyA;
+                const bodyB = pair.bodyB;
+
+                if (bodyA.label.startsWith('fruit_') && bodyA.label === bodyB.label) {
+                    if (bodyA.isMerging || bodyB.isMerging) return;
+
+                    const level = parseInt(bodyA.label.split('_')[1]);
+                    
+                    if (level < 11) { // 11단계(수박)는 더 커지지 않음
+                        bodyA.isMerging = true;
+                        bodyB.isMerging = true;
+
+                        // 큐에 넣어서 afterUpdate 시점에 안전하게 처리
+                        mergeQueue.push({
+                            bodyA: bodyA,
+                            bodyB: bodyB,
+                            level: level,
+                            x: (bodyA.position.x + bodyB.position.x) / 2,
+                            y: (bodyA.position.y + bodyB.position.y) / 2
+                        });
+                    }
+                }
+            });
+        });
+
+        // --- 물리 업데이트 후 처리 (삭제/생성) ---
+        Events.on(engine, 'afterUpdate', () => {
+            if (mergeQueue.length > 0) {
+                mergeQueue.forEach((data) => {
+                    const { bodyA, bodyB, level, x, y } = data;
+                    
+                    const bodies = Composite.allBodies(world);
+                    if (bodies.includes(bodyA) && bodies.includes(bodyB)) {
+                        Composite.remove(world, [bodyA, bodyB]);
+                        
+                        const nextLevel = level + 1;
+                        const newFruit = createFruit(x, y, nextLevel);
+                        Composite.add(world, newFruit);
+
+                        // 점수 & 효과음
+                        score += FRUIT_TYPES[level - 1].score;
+                        document.getElementById('score').innerText = score;
+                        playPopSound();
+                    }
+                });
+                mergeQueue = [];
+            }
+
+            // 게임 오버 체크
+            if (!isGameOver && !canDrop) {
+                const fruits = Composite.allBodies(world).filter(b => b.label.startsWith('fruit_') && !b.isStatic);
+                for (let fruit of fruits) {
+                    // 상단 라인(센서 위치) 위로 넘어가고, 움직임이 멈췄을 때
+                    // 센서 위치(topSensorY)보다 과일 중심이 위에 있으면 체크
+                    // 실제로는 과일 상단이 닿아야 하므로 radius 고려 가능하나 단순하게 y좌표로 체크
+                    if (fruit.position.y < topSensorY && Math.abs(fruit.velocity.y) < 0.2) {
+                        gameOver();
+                        break;
+                    }
+                }
+            }
+        });
+
+        function gameOver() {
+            isGameOver = true;
+            document.getElementById('game-over').style.display = 'block';
+            document.getElementById('final-score').innerText = score;
+        }
+
+        // --- 실행 ---
+        Render.run(render);
+        const runner = Runner.create();
+        Runner.run(runner, engine);
+        spawnFruit();
+
+    </script>
 </body>
 </html>
