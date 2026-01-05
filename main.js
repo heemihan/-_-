@@ -3,6 +3,7 @@ const { Engine, Render, Runner, Bodies, Composite, Events, Body } = Matter;
 const engine = Engine.create();
 const world = engine.world;
 
+// 1. 렌더러 설정: 컨테이너 크기에 딱 맞춤
 const render = Render.create({
     element: document.getElementById('game-container'),
     engine: engine,
@@ -14,20 +15,16 @@ const render = Render.create({
     }
 });
 
-// 배경 설정
-document.getElementById('game-container').style.backgroundImage = "url('asset/background.png')";
-document.getElementById('game-container').style.backgroundSize = "cover";
-
-// 벽 생성
-const wallThickness = 60;
-const ground = Bodies.rectangle(200, 595, 400, 20, { isStatic: true, render: { visible: false } });
-const leftWall = Bodies.rectangle(40, 300, 10, 600, { isStatic: true, render: { visible: false } });
-const rightWall = Bodies.rectangle(360, 300, 10, 600, { isStatic: true, render: { visible: false } });
-const topSensorY = 100;
+// 2. 벽 생성: 게임 영역 바깥으로 보이지 않게 배치
+const wallOptions = { isStatic: true, render: { visible: false } };
+const ground = Bodies.rectangle(200, 595, 400, 10, wallOptions);
+const leftWall = Bodies.rectangle(40, 300, 10, 600, wallOptions);
+const rightWall = Bodies.rectangle(360, 300, 10, 600, wallOptions);
+const topSensorY = 100; // 게임오버 기준선
 
 Composite.add(world, [ground, leftWall, rightWall]);
 
-// 과일 데이터
+// 3. 데이터 및 상태 변수
 const FRUITS = [
     { radius: 20, score: 2 }, { radius: 30, score: 4 }, { radius: 45, score: 8 },
     { radius: 55, score: 16 }, { radius: 70, score: 32 }, { radius: 85, score: 64 },
@@ -40,7 +37,7 @@ let isGameOver = false;
 let currentFruit = null;
 let canDrop = true;
 
-// 캐릭터 생성 함수
+// 4. 캐릭터 생성 및 대기 함수
 function createFruit(x, y, level, isStatic = false) {
     const fruitData = FRUITS[level - 1];
     const indexStr = String(level - 1).padStart(2, '0');
@@ -51,8 +48,7 @@ function createFruit(x, y, level, isStatic = false) {
         render: {
             sprite: {
                 texture: `asset/fruit${indexStr}.png`,
-                xScale: 1,
-                yScale: 1
+                xScale: 1, yScale: 1
             }
         }
     });
@@ -60,7 +56,6 @@ function createFruit(x, y, level, isStatic = false) {
     return fruit;
 }
 
-// 다음 캐릭터 대기
 function spawnFruit() {
     if (isGameOver) return;
     const level = Math.floor(Math.random() * 3) + 1;
@@ -69,21 +64,34 @@ function spawnFruit() {
     canDrop = true;
 }
 
-// 리셋 함수
+// 5. 리셋 함수: 전역(window)에 등록하여 HTML에서 호출 가능하게 함
 window.resetGame = function() {
     const fruits = Composite.allBodies(world).filter(b => b.label && b.label.startsWith('fruit_'));
     Composite.remove(world, fruits);
     score = 0;
     isGameOver = false;
-    currentFruit = null;
-    canDrop = true;
     document.getElementById('score').innerText = '0';
     document.getElementById('game-over').style.display = 'none';
     spawnFruit();
 }
 
-// --- 캐릭터 조작 및 낙하 로직 ---
-
-// 1. 마우스 이동에 따라 캐릭터 위치 이동
+// 6. 마우스 이동 처리: 벽(40~360) 사이에서만 이동
 window.addEventListener('mousemove', (e) => {
-    if (
+    if (currentFruit && currentFruit.isStatic && !isGameOver) {
+        const rect = render.canvas.getBoundingClientRect();
+        let x = e.clientX - rect.left;
+        
+        const radius = FRUITS[parseInt(currentFruit.label.split('_')[1]) - 1].radius;
+        // 캐릭터가 좌우 벽(40, 360)을 뚫고 나가지 않게 제한
+        x = Math.max(40 + radius, Math.min(360 - radius, x));
+        
+        Body.setPosition(currentFruit, { x: x, y: 80 });
+    }
+});
+
+// 7. 클릭 처리: 리셋 버튼 클릭 시에는 무시
+window.addEventListener('click', (e) => {
+    // 클릭한 요소의 ID가 reset-btn이면 과일을 떨어뜨리지 않음
+    if (e.target.id === 'reset-btn') return;
+
+    if
