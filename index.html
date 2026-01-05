@@ -2,15 +2,16 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>수박 게임 - 바닥 라인 수정본</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>수박 게임 - 모바일 통합본</title>
     <style>
         body {
             margin: 0; padding: 0;
             display: flex; justify-content: center; align-items: center;
             height: 100vh; background-color: #1a1a1a;
             overflow: hidden; font-family: 'Pretendard', sans-serif;
-            touch-action: none;
+            /* 모바일에서 화면 밀림 방지 */
+            touch-action: none; overscroll-behavior: none;
         }
 
         #game-container {
@@ -18,10 +19,10 @@
             width: 400px; height: 600px;
             box-shadow: 0 0 50px rgba(0, 0, 0, 0.7);
             border: 4px solid #333; border-radius: 12px;
-            overflow: hidden;
             background-color: #ffeeb0;
             background-image: url('asset/background.png');
             background-size: 100% 100%;
+            overflow: hidden;
         }
 
         #ui-layer {
@@ -37,9 +38,9 @@
 
         #reset-btn {
             position: absolute; top: 15px; right: 15px;
-            width: 40px; height: auto;
+            width: 40px; height: auto; /* 리셋 버튼 사이즈 축소 */
             cursor: pointer; pointer-events: auto;
-            transition: transform 0.1s;
+            z-index: 101;
         }
 
         .game-over {
@@ -83,20 +84,12 @@
             }
         });
 
-        // ----------------------------------------------------
-        // [수정 포인트] 바닥 및 벽 위치 설정
-        // ----------------------------------------------------
+        // 바닥 및 벽 설정 (바닥 라인 550으로 유지)
         const wallOptions = { isStatic: true, render: { visible: false } };
-        
-        // 바닥(Ground)의 y좌표를 550으로 올려서 배경의 하단 라인과 맞춥니다.
         const groundY = 550; 
         const ground = Bodies.rectangle(200, groundY + 30, 400, 60, wallOptions);
-        
-        // 좌우 벽 (바닥 높이에 맞춰 길이를 조절)
         const leftWall = Bodies.rectangle(40, 300, 10, 600, wallOptions);
         const rightWall = Bodies.rectangle(360, 300, 10, 600, wallOptions);
-        
-        // 게임오버 감지선 (상단 빨간 라인)
         const topSensorY = 130; 
 
         Composite.add(world, [ground, leftWall, rightWall]);
@@ -129,77 +122,3 @@
 
         function spawnFruit() {
             if (isGameOver) return;
-            const level = Math.floor(Math.random() * 3) + 1;
-            // 캐릭터 생성 높이 조절
-            currentFruit = createFruit(200, 80, level, true);
-            Composite.add(world, currentFruit);
-            canDrop = true;
-        }
-
-        window.resetGame = function() {
-            const fruits = Composite.allBodies(world).filter(b => b.label && b.label.startsWith('fruit_'));
-            Composite.remove(world, fruits);
-            score = 0; isGameOver = false;
-            document.getElementById('score').innerText = '0';
-            document.getElementById('game-over').style.display = 'none';
-            spawnFruit();
-        };
-
-        window.addEventListener('mousemove', (e) => {
-            if (currentFruit && currentFruit.isStatic && !isGameOver) {
-                const rect = container.getBoundingClientRect();
-                let x = e.clientX - rect.left;
-                const radius = FRUITS[parseInt(currentFruit.label.split('_')[1]) - 1].radius;
-                x = Math.max(45 + radius, Math.min(355 - radius, x));
-                Body.setPosition(currentFruit, { x: x, y: 80 });
-            }
-        });
-
-        window.addEventListener('mousedown', (e) => {
-            if (e.target.id === 'reset-btn') return;
-            if (currentFruit && canDrop && !isGameOver) {
-                canDrop = false;
-                Body.setStatic(currentFruit, false);
-                currentFruit = null;
-                setTimeout(spawnFruit, 1000);
-            }
-        });
-
-        Events.on(engine, 'collisionStart', (event) => {
-            event.pairs.forEach((pair) => {
-                const { bodyA, bodyB } = pair;
-                if (bodyA.label && bodyB.label && bodyA.label.startsWith('fruit_') && bodyA.label === bodyB.label) {
-                    if (bodyA.isMerging || bodyB.isMerging) return;
-                    const level = parseInt(bodyA.label.split('_')[1]);
-                    if (level < 11) {
-                        bodyA.isMerging = true; bodyB.isMerging = true;
-                        const midX = (bodyA.position.x + bodyB.position.x) / 2;
-                        const midY = (bodyA.position.y + bodyB.position.y) / 2;
-                        Composite.remove(world, [bodyA, bodyB]);
-                        Composite.add(world, createFruit(midX, midY, level + 1));
-                        score += FRUITS[level - 1].score;
-                        document.getElementById('score').innerText = score;
-                    }
-                }
-            });
-        });
-
-        Events.on(engine, 'afterUpdate', () => {
-            if (!isGameOver && !canDrop) {
-                const fruits = Composite.allBodies(world).filter(b => b.label && b.label.startsWith('fruit_') && !b.isStatic);
-                for (let fruit of fruits) {
-                    if (fruit.position.y < topSensorY && Math.abs(fruit.velocity.y) < 0.2) {
-                        isGameOver = true;
-                        document.getElementById('game-over').style.display = 'block';
-                        document.getElementById('final-score').innerText = score;
-                    }
-                }
-            }
-        });
-
-        Render.run(render);
-        Runner.run(Runner.create(), engine);
-        spawnFruit();
-    </script>
-</body>
-</html>
