@@ -24,33 +24,30 @@
             cursor: pointer;
         }
 
-        #ui-layer {
-            position: absolute;
-            top: 20px; left: 20px; right: 20px;
-            color: #fff;
-            pointer-events: none; /* 레이어 자체는 클릭 통과 */
-            display: flex;
-            justify-content: space-between; /* 양 끝 배치 */
-            align-items: center;
-            z-index: 5;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
-        }
+        /* style 태그 안에 추가 또는 수정 */
+#ui-layer {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    right: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    pointer-events: none; /* 레이어 전체는 통과 */
+    z-index: 100;
+}
 
-        #reset-btn {
-            pointer-events: auto; /* 버튼만 클릭 가능 */
-            margin-top: 0;
-            padding: 8px 16px;
-            font-size: 14px;
-            background: rgba(255, 255, 255, 0.2);
-            border: 2px solid #fff;
-            color: white;
-            border-radius: 8px;
-            backdrop-filter: blur(4px);
-            cursor: pointer;
-            font-weight: bold;
-        }
+#reset-btn {
+    pointer-events: auto; /* 이미지 버튼만 클릭 활성화 */
+    cursor: pointer;
+    width: 60px;  /* 이미지 크기에 맞춰 조절 */
+    height: auto;
+    transition: transform 0.1s;
+}
 
-        #reset-btn:hover { background: rgba(255, 255, 255, 0.4); }
+#reset-btn:hover {
+    transform: scale(1.1); /* 마우스를 올리면 살짝 커짐 */
+}
 
         .score-board { font-size: 28px; font-weight: 800; }
 
