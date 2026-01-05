@@ -73,7 +73,7 @@ function spawnFruit() {
 
 // 4. 리셋 기능 (이미지 버튼에서 호출됨)
 function resetGame() {
-    // 모든 과일 제거
+    // 모든 과일(캐릭터) 제거
     const fruits = Composite.allBodies(world).filter(body => body.label.startsWith('fruit_'));
     Composite.remove(world, fruits);
 
@@ -82,13 +82,13 @@ function resetGame() {
     isGameOver = false;
     currentFruit = null;
     canDrop = true;
-    
-    const scoreElement = document.getElementById('score');
-    if (scoreElement) scoreElement.innerText = '0';
-    
-    const gameOverElement = document.getElementById('game-over');
-    if (gameOverElement) gameOverElement.style.display = 'none';
+    mergeQueue = [];
 
+    // UI 업데이트
+    document.getElementById('score').innerText = '0';
+    document.getElementById('game-over').style.display = 'none';
+
+    // 첫 과일 다시 생성
     spawnFruit();
 }
 
