@@ -13,28 +13,31 @@
         }
 
         #game-container {
-            position: relative; /* 자식 요소들의 기준점 */
+            position: relative; /* 중요: 내부 요소들의 기준점 */
             width: 400px; height: 600px;
             box-shadow: 0 0 50px rgba(0, 0, 0, 0.7);
             border: 4px solid #333; border-radius: 12px;
             background-color: #ffeeb0;
             overflow: hidden;
+            background-image: url('asset/background.png');
+            background-size: 100% 100%;
         }
 
-        /* Matter.js가 생성하는 canvas 스타일 */
+        /* 게임 화면(Canvas) 설정 */
         canvas {
             display: block;
             position: absolute;
             top: 0; left: 0;
+            z-index: 1; /* 게임 화면을 아래로 */
         }
 
-        /* UI 레이어: 화면 맨 앞으로 배치 */
+        /* UI 레이어: 점수와 버튼을 감싸는 바구니 */
         #ui-layer {
             position: absolute;
             top: 0; left: 0;
             width: 100%; height: 100%;
-            pointer-events: none; /* 클릭 이벤트를 뚫고 아래(canvas)로 전달 */
-            z-index: 1000; /* canvas보다 무조건 위에 오게 함 */
+            pointer-events: none; /* 클릭이 아래로 전달되게 함 */
+            z-index: 999; /* 무조건 게임 화면보다 위로 */
         }
 
         .score-board {
@@ -44,19 +47,18 @@
             text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
         }
 
-        /* 리셋 버튼 이미지 스타일 */
+        /* 리셋 버튼 이미지 */
         #reset-btn {
             position: absolute;
-            top: 20px; right: 20px; /* 빨간 동그라미 위치 */
-            width: 60px; height: auto;
+            top: 15px; right: 15px; /* 빨간 동그라미 위치 */
+            width: 70px; height: auto;
             cursor: pointer;
-            pointer-events: auto; /* 이미지 부분은 클릭이 되도록 설정 */
+            pointer-events: auto; /* 이미지 부분만 클릭 가능하게 */
             transition: transform 0.1s;
         }
 
         #reset-btn:hover { transform: scale(1.1); }
 
-        /* 게임 오버 창 */
         .game-over {
             position: absolute;
             top: 50%; left: 50%;
@@ -64,7 +66,7 @@
             background: rgba(0, 0, 0, 0.85);
             color: white; padding: 40px; text-align: center;
             border-radius: 20px; display: none;
-            z-index: 2000;
+            z-index: 1000;
         }
     </style>
 </head>
