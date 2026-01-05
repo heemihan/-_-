@@ -3,14 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>수박 게임 - 모바일 통합본</title>
+    <title>수박 게임 - 최종 복구본</title>
     <style>
         body {
             margin: 0; padding: 0;
             display: flex; justify-content: center; align-items: center;
             height: 100vh; background-color: #1a1a1a;
             overflow: hidden; font-family: 'Pretendard', sans-serif;
-            /* 모바일에서 화면 밀림 방지 */
             touch-action: none; overscroll-behavior: none;
         }
 
@@ -38,7 +37,7 @@
 
         #reset-btn {
             position: absolute; top: 15px; right: 15px;
-            width: 40px; height: auto; /* 리셋 버튼 사이즈 축소 */
+            width: 40px; height: auto;
             cursor: pointer; pointer-events: auto;
             z-index: 101;
         }
@@ -50,6 +49,8 @@
             padding: 40px; text-align: center; border-radius: 20px;
             display: none; z-index: 200;
         }
+
+        canvas { display: block; position: absolute; top: 0; left: 0; }
     </style>
 </head>
 <body>
@@ -66,59 +67,4 @@
         </div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
-
-    <script>
-        const { Engine, Render, Runner, Bodies, Composite, Events, Body } = Matter;
-
-        const engine = Engine.create();
-        const world = engine.world;
-        const container = document.getElementById('game-container');
-
-        const render = Render.create({
-            element: container,
-            engine: engine,
-            options: {
-                width: 400, height: 600,
-                wireframes: false, background: 'transparent'
-            }
-        });
-
-        // 바닥 및 벽 설정 (바닥 라인 550으로 유지)
-        const wallOptions = { isStatic: true, render: { visible: false } };
-        const groundY = 550; 
-        const ground = Bodies.rectangle(200, groundY + 30, 400, 60, wallOptions);
-        const leftWall = Bodies.rectangle(40, 300, 10, 600, wallOptions);
-        const rightWall = Bodies.rectangle(360, 300, 10, 600, wallOptions);
-        const topSensorY = 130; 
-
-        Composite.add(world, [ground, leftWall, rightWall]);
-
-        const FRUITS = [
-            { radius: 20, score: 2 }, { radius: 30, score: 4 }, { radius: 45, score: 8 },
-            { radius: 55, score: 16 }, { radius: 70, score: 32 }, { radius: 85, score: 64 },
-            { radius: 100, score: 128 }, { radius: 120, score: 256 }, { radius: 140, score: 512 },
-            { radius: 160, score: 1024 }, { radius: 190, score: 2048 }
-        ];
-
-        let score = 0;
-        let isGameOver = false;
-        let currentFruit = null;
-        let canDrop = true;
-
-        function createFruit(x, y, level, isStatic = false) {
-            const fruitData = FRUITS[level - 1];
-            const indexStr = String(level - 1).padStart(2, '0');
-            const texturePath = `asset/fruit${indexStr}.png`;
-            const fruit = Bodies.circle(x, y, fruitData.radius, {
-                label: `fruit_${level}`,
-                isStatic: isStatic,
-                restitution: 0.3, friction: 0.1,
-                render: { sprite: { texture: texturePath, xScale: 1, yScale: 1 } }
-            });
-            fruit.isMerging = false;
-            return fruit;
-        }
-
-        function spawnFruit() {
-            if (isGameOver) return;
+    <script src
