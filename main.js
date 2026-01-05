@@ -10,43 +10,80 @@ const render = Render.create({
         width: 400,
         height: 600,
         wireframes: false,
-        background: 'transparent' // CSS의 배경 이미지가 보이도록 설정
+        background: 'transparent'
     }
 });
 
-// 배경 이미지 직접 적용 (index.html CSS에 넣어도 됨)
+// 배경 설정
 document.getElementById('game-container').style.backgroundImage = "url('asset/background.png')";
 document.getElementById('game-container').style.backgroundSize = "cover";
 
-// 벽 생성 로직은 기존과 동일... (생략)
+// 벽 생성
 const wallThickness = 60;
-const ground = Bodies.rectangle(200, 630, 400, wallThickness, { isStatic: true, render: { visible: false } });
-const leftWall = Bodies.rectangle(-25, 300, 50, 600, { isStatic: true, render: { visible: false } });
-const rightWall = Bodies.rectangle(425, 300, 50, 600, { isStatic: true, render: { visible: false } });
+const ground = Bodies.rectangle(200, 595, 400, 20, { isStatic: true, render: { visible: false } });
+const leftWall = Bodies.rectangle(40, 300, 10, 600, { isStatic: true, render: { visible: false } });
+const rightWall = Bodies.rectangle(360, 300, 10, 600, { isStatic: true, render: { visible: false } });
+const topSensorY = 100;
+
 Composite.add(world, [ground, leftWall, rightWall]);
+
+// 과일 데이터
+const FRUITS = [
+    { radius: 20, score: 2 }, { radius: 30, score: 4 }, { radius: 45, score: 8 },
+    { radius: 55, score: 16 }, { radius: 70, score: 32 }, { radius: 85, score: 64 },
+    { radius: 100, score: 128 }, { radius: 120, score: 256 }, { radius: 140, score: 512 },
+    { radius: 160, score: 1024 }, { radius: 190, score: 2048 }
+];
 
 let score = 0;
 let isGameOver = false;
+let currentFruit = null;
+let canDrop = true;
 
-// 게임 초기화(리셋) 함수
+// 캐릭터 생성 함수
+function createFruit(x, y, level, isStatic = false) {
+    const fruitData = FRUITS[level - 1];
+    const indexStr = String(level - 1).padStart(2, '0');
+    const fruit = Bodies.circle(x, y, fruitData.radius, {
+        label: `fruit_${level}`,
+        isStatic: isStatic,
+        restitution: 0.3,
+        render: {
+            sprite: {
+                texture: `asset/fruit${indexStr}.png`,
+                xScale: 1,
+                yScale: 1
+            }
+        }
+    });
+    fruit.isMerging = false;
+    return fruit;
+}
+
+// 다음 캐릭터 대기
+function spawnFruit() {
+    if (isGameOver) return;
+    const level = Math.floor(Math.random() * 3) + 1;
+    currentFruit = createFruit(200, 80, level, true);
+    Composite.add(world, currentFruit);
+    canDrop = true;
+}
+
+// 리셋 함수
 window.resetGame = function() {
-    // 1. 모든 과일 제거
     const fruits = Composite.allBodies(world).filter(b => b.label && b.label.startsWith('fruit_'));
     Composite.remove(world, fruits);
-
-    // 2. 변수 초기화
     score = 0;
     isGameOver = false;
+    currentFruit = null;
+    canDrop = true;
     document.getElementById('score').innerText = '0';
     document.getElementById('game-over').style.display = 'none';
-
-    // 3. 엔진 다시 시작
-    Engine.clear(engine);
     spawnFruit();
 }
 
-// ... spawnFruit 및 기타 로직 ...
+// --- 캐릭터 조작 및 낙하 로직 ---
 
-Render.run(render);
-Runner.run(Runner.create(), engine);
-spawnFruit();
+// 1. 마우스 이동에 따라 캐릭터 위치 이동
+window.addEventListener('mousemove', (e) => {
+    if (
