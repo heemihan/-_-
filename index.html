@@ -41,14 +41,36 @@
             display: block;
         }
 
-        #ui-layer {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            color: #fff;
-            pointer-events: none;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
-            z-index: 5;
+      #ui-layer {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    right: 20px; /* 오른쪽 여백 추가 */
+    color: #fff;
+    pointer-events: none; /* 레이어 자체는 클릭 무시 */
+    display: flex;
+    justify-content: space-between; /* 점수와 버튼을 양 끝으로 배치 */
+    align-items: flex-start;
+    z-index: 5;
+}
+
+#reset-btn {
+    margin-top: 0; /* 기존 버튼 마진 제거 */
+    padding: 8px 16px;
+    font-size: 14px;
+    background: rgba(255, 255, 255, 0.2); /* 반투명 배경 */
+    border: 2px solid #fff;
+    pointer-events: auto; /* 버튼은 클릭 가능하게 설정 */
+    backdrop-filter: blur(4px); /* 배경 흐림 효과 */
+}
+
+#reset-btn:hover {
+    background: rgba(255, 255, 255, 0.4);
+}
+            <div id="ui-layer">
+    <div class="score-board">SCORE: <span id="score">0</span></div>
+    <button id="reset-btn" onclick="resetGame()">RESET</button>
+</div>
         }
 
         .score-board {
@@ -391,25 +413,24 @@
         }
 
         // --- 게임 재시작 함수 (새로고침 없이) ---
-        function resetGame() {
-            // 1. 물리 엔진 월드 비우기 (벽과 센서 제외한 과일들만 제거)
-            const allBodies = Composite.allBodies(world);
-            const fruits = allBodies.filter(body => body.label.startsWith('fruit_'));
-            Composite.remove(world, fruits);
+       function resetGame() {
+    // 1. 모든 과일 제거
+    const allBodies = Composite.allBodies(world);
+    const fruits = allBodies.filter(body => body.label.startsWith('fruit_'));
+    Composite.remove(world, fruits);
 
-            // 2. 변수 초기화
-            score = 0;
-            isGameOver = false;
-            currentFruit = null;
-            canDrop = true;
-            mergeQueue = [];
+    // 2. 변수 및 UI 초기화
+    score = 0;
+    isGameOver = false;
+    currentFruit = null;
+    canDrop = true;
+    mergeQueue = [];
+    document.getElementById('score').innerText = '0';
+    document.getElementById('game-over').style.display = 'none';
 
-            // 3. UI 초기화
-            document.getElementById('score').innerText = '0';
-            document.getElementById('game-over').style.display = 'none';
-
-            // 4. 첫 과일 다시 스폰
-            spawnFruit();
+    // 3. 새 과일 생성
+    spawnFruit();
+}
         }
                     }
                 }
