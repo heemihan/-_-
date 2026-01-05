@@ -3,45 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>수박 게임</title>
+    <title>JS 수박 게임 - 리셋 기능 포함</title>
     <style>
         body {
             margin: 0; padding: 0;
             display: flex; justify-content: center; align-items: center;
             height: 100vh; background-color: #1a1a1a;
             overflow: hidden; font-family: 'Pretendard', sans-serif;
+            touch-action: none;
         }
 
         #game-container {
-            position: relative; /* 중요: 내부 요소들의 기준점 */
+            position: relative;
             width: 400px; height: 600px;
             box-shadow: 0 0 50px rgba(0, 0, 0, 0.7);
             border: 4px solid #333; border-radius: 12px;
-            background-color: #ffeeb0;
             overflow: hidden;
             background-image: url('asset/background.png');
             background-size: 100% 100%;
         }
 
-        /* 게임 화면(Canvas) 설정 */
-        canvas {
-            display: block;
-            position: absolute;
-            top: 0; left: 0;
-            z-index: 1; /* 게임 화면을 아래로 */
-        }
-
-        /* UI 레이어: 점수와 버튼을 감싸는 바구니 */
+        /* UI 레이어: 클릭이 바닥(게임판)으로 통과되도록 pointer-events: none 설정 */
         #ui-layer {
-<div id="ui-layer">
-    <div class="score-board">SCORE: <span id="score">0</span></div>
-    <img src="asset/resetGame.png" id="reset-btn" onclick="resetGame()" alt="Reset">
-</div>
             position: absolute;
             top: 0; left: 0;
             width: 100%; height: 100%;
-            pointer-events: none; /* 클릭이 아래로 전달되게 함 */
-            z-index: 999; /* 무조건 게임 화면보다 위로 */
+            pointer-events: none; 
+            z-index: 100;
         }
 
         .score-board {
@@ -51,15 +39,14 @@
             text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
         }
 
-        /* 리셋 버튼 이미지 */
+        /* 리셋 버튼: 사이즈를 40px로 줄이고 오른쪽 상단에 배치 */
         #reset-btn {
             position: absolute;
-            top: 15px; right: 15px; /* 빨간 동그라미 위치 */
+            top: 15px; right: 15px;
             width: 40px; height: auto;
             cursor: pointer;
-            pointer-events: auto; /* 이미지 부분만 클릭 가능하게 */
+            pointer-events: auto; /* 버튼만 클릭 가능하게 설정 */
             transition: transform 0.1s;
-            z-index: 1000;
         }
 
         #reset-btn:hover { transform: scale(1.1); }
@@ -71,7 +58,13 @@
             background: rgba(0, 0, 0, 0.85);
             color: white; padding: 40px; text-align: center;
             border-radius: 20px; display: none;
-            z-index: 1000;
+            z-index: 200;
+        }
+
+        .game-over button {
+            margin-top: 20px; padding: 12px 24px;
+            background: #4CAF50; border: none; color: white;
+            border-radius: 8px; font-weight: bold; cursor: pointer;
         }
     </style>
 </head>
@@ -91,6 +84,25 @@
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
-    <script src="main.js"></script>
-</body>
-</html>
+
+    <script>
+        const { Engine, Render, Runner, Bodies, Composite, Events, Body } = Matter;
+
+        const engine = Engine.create();
+        const world = engine.world;
+        const container = document.getElementById('game-container');
+
+        const render = Render.create({
+            element: container,
+            engine: engine,
+            options: {
+                width: 400, height: 600,
+                wireframes: false, background: 'transparent'
+            }
+        });
+
+        // 벽 설정
+        const wallOptions = { isStatic: true, render: { visible: false } };
+        const ground = Bodies.rectangle(200, 595, 400, 10, wallOptions);
+        const leftWall = Bodies.rectangle(40, 300, 10, 600, wallOptions);
+        const rightWall = Bodies.rectangle(360, 300,
