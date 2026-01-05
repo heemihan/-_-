@@ -37,23 +37,30 @@ let isGameOver = false;
 let currentFruit = null;
 let canDrop = true;
 
-// 4. 캐릭터 생성 및 대기 함수
+// 캐릭터(과일) 생성 함수 수정
 function createFruit(x, y, level, isStatic = false) {
     const fruitData = FRUITS[level - 1];
-    const indexStr = String(level - 1).padStart(2, '0');
+    
+    // 파일명 규칙: fruit00.png, fruit01.png ...
+    // level이 1일 때 '00', level이 2일 때 '01'이 되도록 설정
+    const indexStr = String(level - 1).padStart(2, '0'); 
+    const texturePath = `asset/fruit${indexStr}.png`; // 'fruit' 접두어 추가
+
     const fruit = Bodies.circle(x, y, fruitData.radius, {
         label: `fruit_${level}`,
         isStatic: isStatic,
         restitution: 0.3,
         render: {
             sprite: {
-                texture: `asset/fruit${indexStr}.png`,
-                xScale: 1, yScale: 1
+                texture: texturePath, // 수정된 경로 적용
+                xScale: 1, // 이미지 크기에 맞춰 조절 (이미지가 크면 0.5 등으로 조절)
+                yScale: 1
             }
         }
     });
     fruit.isMerging = false;
     return fruit;
+}
 }
 
 function spawnFruit() {
