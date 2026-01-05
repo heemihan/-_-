@@ -99,6 +99,7 @@
             <h1>GAME OVER</h1>
             <p>최종 점수: <span id="final-score">0</span></p>
             <button onclick="location.reload()">다시 도전</button>
+            <button onclick="resetGame()">다시 도전</button>
         </div>
     </div>
 
@@ -382,21 +383,43 @@
                 mergeQueue = [];
             }
 
-            // 게임 오버 체크
-            if (!isGameOver && !canDrop) {
-                const fruits = Composite.allBodies(world).filter(b => b.label.startsWith('fruit_') && !b.isStatic);
-                for (let fruit of fruits) {
-                    // 상단 라인(센서 위치) 위로 넘어가고, 움직임이 멈췄을 때
-                    // 센서 위치(topSensorY)보다 과일 중심이 위에 있으면 체크
-                    // 실제로는 과일 상단이 닿아야 하므로 radius 고려 가능하나 단순하게 y좌표로 체크
-                    if (fruit.position.y < topSensorY && Math.abs(fruit.velocity.y) < 0.2) {
-                        gameOver();
-                        break;
+            // --- 게임 오버 처리 ---
+        function gameOver() {
+            isGameOver = true;
+            document.getElementById('game-over').style.display = 'block';
+            document.getElementById('final-score').innerText = score;
+        }
+
+        // --- 게임 재시작 함수 (새로고침 없이) ---
+        function resetGame() {
+            // 1. 물리 엔진 월드 비우기 (벽과 센서 제외한 과일들만 제거)
+            const allBodies = Composite.allBodies(world);
+            const fruits = allBodies.filter(body => body.label.startsWith('fruit_'));
+            Composite.remove(world, fruits);
+
+            // 2. 변수 초기화
+            score = 0;
+            isGameOver = false;
+            currentFruit = null;
+            canDrop = true;
+            mergeQueue = [];
+
+            // 3. UI 초기화
+            document.getElementById('score').innerText = '0';
+            document.getElementById('game-over').style.display = 'none';
+
+            // 4. 첫 과일 다시 스폰
+            spawnFruit();
+        }
                     }
                 }
             }
         });
-
+           window.addEventListener('keydown', (e) => {
+            if (e.key.toLowerCase() === 'r') {
+                resetGame();
+            }
+        });
         function gameOver() {
             isGameOver = true;
             document.getElementById('game-over').style.display = 'block';
