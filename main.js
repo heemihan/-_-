@@ -3,7 +3,7 @@ const { Engine, Render, Runner, Bodies, Composite, Events, Body } = Matter;
 const engine = Engine.create();
 const world = engine.world;
 
-// 1. 렌더러 설정: 컨테이너 크기에 딱 맞춤
+// 1. 렌더러 설정
 const render = Render.create({
     element: document.getElementById('game-container'),
     engine: engine,
@@ -15,12 +15,12 @@ const render = Render.create({
     }
 });
 
-// 2. 벽 생성: 게임 영역 바깥으로 보이지 않게 배치
+// 2. 벽 생성
 const wallOptions = { isStatic: true, render: { visible: false } };
 const ground = Bodies.rectangle(200, 595, 400, 10, wallOptions);
 const leftWall = Bodies.rectangle(40, 300, 10, 600, wallOptions);
 const rightWall = Bodies.rectangle(360, 300, 10, 600, wallOptions);
-const topSensorY = 100; // 게임오버 기준선
+const topSensorY = 100; 
 
 Composite.add(world, [ground, leftWall, rightWall]);
 
@@ -37,14 +37,11 @@ let isGameOver = false;
 let currentFruit = null;
 let canDrop = true;
 
-// 캐릭터(과일) 생성 함수 수정
+// 4. 캐릭터 생성 함수
 function createFruit(x, y, level, isStatic = false) {
     const fruitData = FRUITS[level - 1];
-    
-    // 파일명 규칙: fruit00.png, fruit01.png ...
-    // level이 1일 때 '00', level이 2일 때 '01'이 되도록 설정
     const indexStr = String(level - 1).padStart(2, '0'); 
-    const texturePath = `asset/fruit${indexStr}.png`; // 'fruit' 접두어 추가
+    const texturePath = `asset/fruit${indexStr}.png`; 
 
     const fruit = Bodies.circle(x, y, fruitData.radius, {
         label: `fruit_${level}`,
@@ -52,15 +49,14 @@ function createFruit(x, y, level, isStatic = false) {
         restitution: 0.3,
         render: {
             sprite: {
-                texture: texturePath, // 수정된 경로 적용
-                xScale: 1, // 이미지 크기에 맞춰 조절 (이미지가 크면 0.5 등으로 조절)
+                texture: texturePath,
+                xScale: 1,
                 yScale: 1
             }
         }
     });
     fruit.isMerging = false;
     return fruit;
-}
 }
 
 function spawnFruit() {
@@ -71,7 +67,7 @@ function spawnFruit() {
     canDrop = true;
 }
 
-// 5. 리셋 함수: 전역(window)에 등록하여 HTML에서 호출 가능하게 함
+// 5. 리셋 함수
 window.resetGame = function() {
     const fruits = Composite.allBodies(world).filter(b => b.label && b.label.startsWith('fruit_'));
     Composite.remove(world, fruits);
@@ -82,23 +78,65 @@ window.resetGame = function() {
     spawnFruit();
 }
 
-// 6. 마우스 이동 처리: 벽(40~360) 사이에서만 이동
+// 6. 마우스 이동 처리
 window.addEventListener('mousemove', (e) => {
     if (currentFruit && currentFruit.isStatic && !isGameOver) {
         const rect = render.canvas.getBoundingClientRect();
         let x = e.clientX - rect.left;
-        
-        const radius = FRUITS[parseInt(currentFruit.label.split('_')[1]) - 1].radius;
-        // 캐릭터가 좌우 벽(40, 360)을 뚫고 나가지 않게 제한
+        const level = parseInt(currentFruit.label.split('_')[1]);
+        const radius = FRUITS[level - 1].radius;
         x = Math.max(40 + radius, Math.min(360 - radius, x));
-        
         Body.setPosition(currentFruit, { x: x, y: 80 });
     }
 });
 
-// 7. 클릭 처리: 리셋 버튼 클릭 시에는 무시
+// 7. 클릭 처리
 window.addEventListener('click', (e) => {
-    // 클릭한 요소의 ID가 reset-btn이면 과일을 떨어뜨리지 않음
     if (e.target.id === 'reset-btn') return;
 
-    if
+    if (currentFruit && canDrop && !isGameOver) {
+        canDrop = false;
+        Body.setStatic(currentFruit, false);
+        currentFruit = null;
+        setTimeout(spawnFruit, 1000);
+    }
+});
+
+// 8. 충돌(합성) 로직
+Events.on(engine, 'collisionStart', (event) => {
+    event.pairs.forEach((pair) => {
+        const { bodyA, bodyB } = pair;
+        if (bodyA.label && bodyB.label && bodyA.label.startsWith('fruit_') && bodyA.label === bodyB.label) {
+            if (bodyA.isMerging || bodyB.isMerging) return;
+            const level = parseInt(bodyA.label.split('_')[1]);
+            if (level < 11) {
+                bodyA.isMerging = true; 
+                bodyB.isMerging = true;
+                const midX = (bodyA.position.x + bodyB.position.x) / 2;
+                const midY = (bodyA.position.y + bodyB.position.y) / 2;
+                Composite.remove(world, [bodyA, bodyB]);
+                Composite.add(world, createFruit(midX, midY, level + 1));
+                score += FRUITS[level - 1].score;
+                document.getElementById('score').innerText = score;
+            }
+        }
+    });
+});
+
+// 9. 게임오버 체크
+Events.on(engine, 'afterUpdate', () => {
+    if (isGameOver) return;
+    const fruits = Composite.allBodies(world).filter(b => b.label && b.label.startsWith('fruit_') && !b.isStatic);
+    for (let fruit of fruits) {
+        if (fruit.position.y < topSensorY && Math.abs(fruit.velocity.y) < 0.2) {
+            isGameOver = true;
+            document.getElementById('game-over').style.display = 'block';
+            document.getElementById('final-score').innerText = score;
+        }
+    }
+});
+
+// 실행
+Render.run(render);
+Runner.run(Runner.create(), engine);
+spawnFruit();
