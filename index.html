@@ -3,75 +3,68 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JS 수박 게임 - 커스텀 영역</title>
+    <title>수박 게임</title>
     <style>
-        /* 1. 전체 배경 및 폰트 설정 */
         body {
             margin: 0; padding: 0;
             display: flex; justify-content: center; align-items: center;
             height: 100vh; background-color: #1a1a1a;
             overflow: hidden; font-family: 'Pretendard', sans-serif;
-            touch-action: none;
         }
 
-        /* 2. 게임판 설정 */
         #game-container {
-            position: relative;
+            position: relative; /* 자식 요소들의 기준점 */
             width: 400px; height: 600px;
             box-shadow: 0 0 50px rgba(0, 0, 0, 0.7);
             border: 4px solid #333; border-radius: 12px;
-            overflow: hidden; background-color: #ffeeb0;
-            background-image: url('asset/background.png');
-            background-size: 100% 100%;
+            background-color: #ffeeb0;
+            overflow: hidden;
         }
 
-        /* 3. 상단 UI 레이어 (점수와 리셋버튼) */
+        /* Matter.js가 생성하는 canvas 스타일 */
+        canvas {
+            display: block;
+            position: absolute;
+            top: 0; left: 0;
+        }
+
+        /* UI 레이어: 화면 맨 앞으로 배치 */
         #ui-layer {
             position: absolute;
-            top: 15px; left: 15px; right: 15px;
-            display: flex;
-            justify-content: space-between; /* 양 끝 정렬 */
-            align-items: center;
-            z-index: 1000; /* 중요: Canvas보다 위에 위치 */
-            pointer-events: none; /* 레이어 자체는 클릭 통과 */
-            color: #fff;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none; /* 클릭 이벤트를 뚫고 아래(canvas)로 전달 */
+            z-index: 1000; /* canvas보다 무조건 위에 오게 함 */
+        }
+
+        .score-board {
+            position: absolute;
+            top: 20px; left: 20px;
+            color: #fff; font-size: 28px; font-weight: 800;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
         }
 
-        .score-board { font-size: 28px; font-weight: 800; }
-
-        /* 4. 리셋 이미지 버튼 */
+        /* 리셋 버튼 이미지 스타일 */
         #reset-btn {
-            pointer-events: auto; /* 이미지 부분만 클릭 가능하게 */
+            position: absolute;
+            top: 20px; right: 20px; /* 빨간 동그라미 위치 */
+            width: 60px; height: auto;
             cursor: pointer;
-            width: 60px; /* 이미지 크기 */
-            height: auto;
+            pointer-events: auto; /* 이미지 부분은 클릭이 되도록 설정 */
             transition: transform 0.1s;
         }
 
         #reset-btn:hover { transform: scale(1.1); }
-        #reset-btn:active { transform: scale(0.9); }
 
-        /* 5. 게임 오버 팝업 */
+        /* 게임 오버 창 */
         .game-over {
             position: absolute;
             top: 50%; left: 50%;
             transform: translate(-50%, -50%);
             background: rgba(0, 0, 0, 0.85);
-            color: white;
-            padding: 40px; text-align: center;
+            color: white; padding: 40px; text-align: center;
             border-radius: 20px; display: none;
-            z-index: 2000; min-width: 250px;
-        }
-
-        .game-over button {
-            margin-top: 20px;
-            padding: 12px 24px;
-            background: #4CAF50;
-            border: none; color: white;
-            border-radius: 8px; font-weight: bold;
-            cursor: pointer;
-            font-size: 18px;
+            z-index: 2000;
         }
     </style>
 </head>
@@ -91,197 +84,6 @@
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
-
-    <script>
-        const { Engine, Render, Runner, Bodies, Composite, Events, Body, World } = Matter;
-
-        const CONTAINER_WIDTH = 400;
-        const CONTAINER_HEIGHT = 600;
-
-        const GAME_AREA = { x: 40, y: 60, width: 320, height: 500 };
-        
-        const FRUIT_TYPES = [
-            { radius: 20, score: 2 }, { radius: 30, score: 4 },
-            { radius: 45, score: 8 }, { radius: 55, score: 16 },
-            { radius: 70, score: 32 }, { radius: 85, score: 64 },
-            { radius: 100, score: 128 }, { radius: 120, score: 256 },
-            { radius: 140, score: 512 }, { radius: 160, score: 1024 },
-            { radius: 190, score: 2048 }
-        ];
-
-        let score = 0;
-        let isGameOver = false;
-        let currentFruit = null;
-        let canDrop = true;
-        let mergeQueue = []; 
-
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-        function playPopSound() {
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-            const oscillator = audioCtx.createOscillator();
-            const gainNode = audioCtx.createGain();
-            oscillator.type = 'sine';
-            oscillator.frequency.setValueAtTime(400, audioCtx.currentTime);
-            oscillator.frequency.exponentialRampToValueAtTime(600, audioCtx.currentTime + 0.1);
-            gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-            oscillator.connect(gainNode);
-            gainNode.connect(audioCtx.destination);
-            oscillator.start();
-            oscillator.stop(audioCtx.currentTime + 0.1);
-        }
-
-        const engine = Engine.create();
-        const world = engine.world;
-        const container = document.getElementById('game-container');
-
-        const render = Render.create({
-            element: container,
-            engine: engine,
-            options: {
-                width: CONTAINER_WIDTH,
-                height: CONTAINER_HEIGHT,
-                wireframes: false,
-                background: 'transparent'
-            }
-        });
-
-        const wallThickness = 60;
-        const wallOptions = { isStatic: true, render: { visible: false } };
-        const ground = Bodies.rectangle(GAME_AREA.x + GAME_AREA.width/2, GAME_AREA.y + GAME_AREA.height + wallThickness/2, GAME_AREA.width, wallThickness, wallOptions);
-        const leftWall = Bodies.rectangle(GAME_AREA.x - wallThickness/2, GAME_AREA.y + GAME_AREA.height/2, wallThickness, GAME_AREA.height, wallOptions);
-        const rightWall = Bodies.rectangle(GAME_AREA.x + GAME_AREA.width + wallThickness/2, GAME_AREA.y + GAME_AREA.height/2, wallThickness, GAME_AREA.height, wallOptions);
-        
-        const topSensorY = GAME_AREA.y + 100;
-        const topSensor = Bodies.rectangle(GAME_AREA.x + GAME_AREA.width/2, topSensorY, GAME_AREA.width, 2, { 
-            isStatic: true, isSensor: true, label: 'topLine', render: { fillStyle: 'rgba(255, 0, 0, 0.1)' } 
-        });
-
-        Composite.add(world, [ground, leftWall, rightWall, topSensor]);
-
-        function createFruit(x, y, level, isStatic = false) {
-            const type = FRUIT_TYPES[level - 1];
-            const indexStr = String(level - 1).padStart(2, '0');
-            const texturePath = `asset/fruit${indexStr}.png`;
-            const fruit = Bodies.circle(x, y, type.radius, {
-                label: `fruit_${level}`,
-                isStatic: isStatic,
-                restitution: 0.3,
-                friction: 0.1,
-                render: { sprite: { texture: texturePath, xScale: 1, yScale: 1 } }
-            });
-            fruit.isMerging = false;
-            return fruit;
-        }
-
-        function spawnFruit() {
-            if (isGameOver) return;
-            const level = Math.floor(Math.random() * 3) + 1;
-            const spawnX = GAME_AREA.x + GAME_AREA.width / 2;
-            const spawnY = GAME_AREA.y + 50;
-            currentFruit = createFruit(spawnX, spawnY, level, true);
-            Composite.add(world, currentFruit);
-            canDrop = true;
-        }
-
-        const handleMove = (e) => {
-            if (!currentFruit || isGameOver) return;
-            const rect = render.canvas.getBoundingClientRect();
-            let clientX = e.type.startsWith('touch') ? e.touches[0].clientX : e.clientX;
-            if (clientX === undefined) return;
-            let x = clientX - rect.left;
-            const level = parseInt(currentFruit.label.split('_')[1]);
-            const radius = FRUIT_TYPES[level - 1].radius;
-            const minX = GAME_AREA.x + radius;
-            const maxX = GAME_AREA.x + GAME_AREA.width - radius;
-            if (x < minX) x = minX;
-            if (x > maxX) x = maxX;
-            Body.setPosition(currentFruit, { x: x, y: GAME_AREA.y + 50 });
-        };
-
-        const handleDrop = (e) => {
-            // 리셋 버튼 클릭시에는 과일을 떨어뜨리지 않음
-            if (e.target.id === 'reset-btn') return;
-            
-            if (e && e.cancelable) e.preventDefault();
-            if (!currentFruit || !canDrop || isGameOver) return;
-            canDrop = false;
-            Body.setStatic(currentFruit, false);
-            currentFruit = null;
-            setTimeout(spawnFruit, 1000);
-        };
-
-        window.addEventListener('mousemove', handleMove);
-        window.addEventListener('touchmove', handleMove, { passive: false });
-        window.addEventListener('mousedown', (e) => { if(e.button === 0) handleDrop(e); });
-        window.addEventListener('touchend', (e) => handleDrop(e));
-
-        Events.on(engine, 'collisionStart', (event) => {
-            event.pairs.forEach((pair) => {
-                const { bodyA, bodyB } = pair;
-                if (bodyA.label && bodyB.label && bodyA.label.startsWith('fruit_') && bodyA.label === bodyB.label) {
-                    if (bodyA.isMerging || bodyB.isMerging) return;
-                    const level = parseInt(bodyA.label.split('_')[1]);
-                    if (level < 11) {
-                        bodyA.isMerging = true; bodyB.isMerging = true;
-                        mergeQueue.push({ bodyA, bodyB, level, x: (bodyA.position.x + bodyB.position.x) / 2, y: (bodyA.position.y + bodyB.position.y) / 2 });
-                    }
-                }
-            });
-        });
-
-        Events.on(engine, 'afterUpdate', () => {
-            if (mergeQueue.length > 0) {
-                mergeQueue.forEach((data) => {
-                    const { bodyA, bodyB, level, x, y } = data;
-                    if (Composite.allBodies(world).includes(bodyA) && Composite.allBodies(world).includes(bodyB)) {
-                        Composite.remove(world, [bodyA, bodyB]);
-                        Composite.add(world, createFruit(x, y, level + 1));
-                        score += FRUIT_TYPES[level - 1].score;
-                        document.getElementById('score').innerText = score;
-                        playPopSound();
-                    }
-                });
-                mergeQueue = [];
-            }
-
-            if (!isGameOver && !canDrop) {
-                const fruits = Composite.allBodies(world).filter(b => b.label && b.label.startsWith('fruit_') && !b.isStatic);
-                for (let fruit of fruits) {
-                    if (fruit.position.y < topSensorY && Math.abs(fruit.velocity.y) < 0.2) {
-                        gameOver(); break;
-                    }
-                }
-            }
-        });
-
-        function gameOver() {
-            isGameOver = true;
-            document.getElementById('game-over').style.display = 'block';
-            document.getElementById('final-score').innerText = score;
-        }
-
-        function resetGame() {
-            const fruits = Composite.allBodies(world).filter(body => body.label && body.label.startsWith('fruit_'));
-            Composite.remove(world, fruits);
-            score = 0;
-            isGameOver = false;
-            currentFruit = null;
-            canDrop = true;
-            mergeQueue = [];
-            document.getElementById('score').innerText = '0';
-            document.getElementById('game-over').style.display = 'none';
-            spawnFruit();
-        }
-
-        window.addEventListener('keydown', (e) => {
-            if (e.key.toLowerCase() === 'r') resetGame();
-        });
-
-        Render.run(render);
-        Runner.run(Runner.create(), engine);
-        spawnFruit();
-    </script>
+    <script src="main.js"></script>
 </body>
 </html>
