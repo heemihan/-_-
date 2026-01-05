@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>JS 수박 게임 - 커스텀 영역</title>
     <style>
+        /* 1. 전체 배경 및 폰트 설정 */
         body {
             margin: 0; padding: 0;
             display: flex; justify-content: center; align-items: center;
@@ -13,6 +14,7 @@
             touch-action: none;
         }
 
+        /* 2. 게임판 설정 */
         #game-container {
             position: relative;
             width: 400px; height: 600px;
@@ -21,36 +23,36 @@
             overflow: hidden; background-color: #ffeeb0;
             background-image: url('asset/background.png');
             background-size: 100% 100%;
-            cursor: pointer;
         }
 
-        /* style 태그 안에 추가 또는 수정 */
-#ui-layer {
-    position: absolute;
-    top: 20px;
-    left: 20px;
-    right: 20px;
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    pointer-events: none; /* 레이어 전체는 통과 */
-    z-index: 100;
-}
-
-#reset-btn {
-    pointer-events: auto; /* 이미지 버튼만 클릭 활성화 */
-    cursor: pointer;
-    width: 60px;  /* 이미지 크기에 맞춰 조절 */
-    height: auto;
-    transition: transform 0.1s;
-}
-
-#reset-btn:hover {
-    transform: scale(1.1); /* 마우스를 올리면 살짝 커짐 */
-}
+        /* 3. 상단 UI 레이어 (점수와 리셋버튼) */
+        #ui-layer {
+            position: absolute;
+            top: 15px; left: 15px; right: 15px;
+            display: flex;
+            justify-content: space-between; /* 양 끝 정렬 */
+            align-items: center;
+            z-index: 1000; /* 중요: Canvas보다 위에 위치 */
+            pointer-events: none; /* 레이어 자체는 클릭 통과 */
+            color: #fff;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+        }
 
         .score-board { font-size: 28px; font-weight: 800; }
 
+        /* 4. 리셋 이미지 버튼 */
+        #reset-btn {
+            pointer-events: auto; /* 이미지 부분만 클릭 가능하게 */
+            cursor: pointer;
+            width: 60px; /* 이미지 크기 */
+            height: auto;
+            transition: transform 0.1s;
+        }
+
+        #reset-btn:hover { transform: scale(1.1); }
+        #reset-btn:active { transform: scale(0.9); }
+
+        /* 5. 게임 오버 팝업 */
         .game-over {
             position: absolute;
             top: 50%; left: 50%;
@@ -59,61 +61,27 @@
             color: white;
             padding: 40px; text-align: center;
             border-radius: 20px; display: none;
-            z-index: 10; min-width: 250px;
+            z-index: 2000; min-width: 250px;
         }
 
         .game-over button {
-            margin-top: 10px;
+            margin-top: 20px;
             padding: 12px 24px;
             background: #4CAF50;
             border: none; color: white;
             border-radius: 8px; font-weight: bold;
             cursor: pointer;
-        <style>
-    /* 화면 레이아웃 설정 */
-    #game-container {
-        position: relative; /* 자식 요소인 버튼이 이 안에서 배치되게 함 */
-        width: 400px;
-        height: 600px;
-        margin: 0 auto;
-    }
-
-    /* 리셋 버튼이 들어갈 상단 바 */
-    #ui-layer {
-        position: absolute;
-        top: 10px;
-        left: 10px;
-        right: 10px;
-        display: flex;
-        justify-content: space-between; /* 점수는 왼쪽, 버튼은 오른쪽 */
-        align-items: center;
-        z-index: 100; /* 중요: 게임 화면보다 항상 위에 보이게 함 */
-        pointer-events: none; /* 레이어 자체는 클릭을 통과시킴 */
-    }
-
-    /* 실제 이미지 버튼 디자인 */
-    #reset-btn {
-        pointer-events: auto; /* 중요: 이미지는 클릭이 되게 함 */
-        width: 50px; /* 이미지 크기 조절 */
-        height: auto;
-        cursor: pointer;
-    }
-</style>
+            font-size: 18px;
+        }
+    </style>
 </head>
 <body>
 
-   <div id="game-container">
-    <div id="ui-layer">
-        <div class="score-board">SCORE: <span id="score">0</span></div>
-        <img src="asset/resetGame.png" id="reset-btn" onclick="resetGame()" alt="Reset">
-    </div>
-
-    <div id="game-over" class="game-over">
-        <h1>GAME OVER</h1>
-        <p>최종 점수: <span id="final-score">0</span></p>
-        <button onclick="resetGame()">다시 도전</button>
-    </div>
-</div>
+    <div id="game-container">
+        <div id="ui-layer">
+            <div class="score-board">SCORE: <span id="score">0</span></div>
+            <img src="asset/resetGame.png" id="reset-btn" onclick="resetGame()" alt="Reset">
+        </div>
 
         <div id="game-over" class="game-over">
             <h1>GAME OVER</h1>
@@ -130,10 +98,7 @@
         const CONTAINER_WIDTH = 400;
         const CONTAINER_HEIGHT = 600;
 
-        const GAME_AREA = {
-            x: 40, y: 60,
-            width: 320, height: 500
-        };
+        const GAME_AREA = { x: 40, y: 60, width: 320, height: 500 };
         
         const FRUIT_TYPES = [
             { radius: 20, score: 2 }, { radius: 30, score: 4 },
@@ -182,7 +147,6 @@
             }
         });
 
-        // 벽 생성
         const wallThickness = 60;
         const wallOptions = { isStatic: true, render: { visible: false } };
         const ground = Bodies.rectangle(GAME_AREA.x + GAME_AREA.width/2, GAME_AREA.y + GAME_AREA.height + wallThickness/2, GAME_AREA.width, wallThickness, wallOptions);
@@ -237,6 +201,9 @@
         };
 
         const handleDrop = (e) => {
+            // 리셋 버튼 클릭시에는 과일을 떨어뜨리지 않음
+            if (e.target.id === 'reset-btn') return;
+            
             if (e && e.cancelable) e.preventDefault();
             if (!currentFruit || !canDrop || isGameOver) return;
             canDrop = false;
@@ -248,12 +215,12 @@
         window.addEventListener('mousemove', handleMove);
         window.addEventListener('touchmove', handleMove, { passive: false });
         window.addEventListener('mousedown', (e) => { if(e.button === 0) handleDrop(e); });
-        window.addEventListener('touchend', handleDrop);
+        window.addEventListener('touchend', (e) => handleDrop(e));
 
         Events.on(engine, 'collisionStart', (event) => {
             event.pairs.forEach((pair) => {
                 const { bodyA, bodyB } = pair;
-                if (bodyA.label.startsWith('fruit_') && bodyA.label === bodyB.label) {
+                if (bodyA.label && bodyB.label && bodyA.label.startsWith('fruit_') && bodyA.label === bodyB.label) {
                     if (bodyA.isMerging || bodyB.isMerging) return;
                     const level = parseInt(bodyA.label.split('_')[1]);
                     if (level < 11) {
@@ -280,7 +247,7 @@
             }
 
             if (!isGameOver && !canDrop) {
-                const fruits = Composite.allBodies(world).filter(b => b.label.startsWith('fruit_') && !b.isStatic);
+                const fruits = Composite.allBodies(world).filter(b => b.label && b.label.startsWith('fruit_') && !b.isStatic);
                 for (let fruit of fruits) {
                     if (fruit.position.y < topSensorY && Math.abs(fruit.velocity.y) < 0.2) {
                         gameOver(); break;
@@ -296,7 +263,7 @@
         }
 
         function resetGame() {
-            const fruits = Composite.allBodies(world).filter(body => body.label.startsWith('fruit_'));
+            const fruits = Composite.allBodies(world).filter(body => body.label && body.label.startsWith('fruit_'));
             Composite.remove(world, fruits);
             score = 0;
             isGameOver = false;
@@ -315,7 +282,6 @@
         Render.run(render);
         Runner.run(Runner.create(), engine);
         spawnFruit();
-
     </script>
 </body>
 </html>
