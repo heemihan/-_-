@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JS 수박 게임 - 리셋 기능 포함</title>
+    <title>JS 수박 게임 - 리셋 기능 수정본</title>
     <style>
         body {
             margin: 0; padding: 0;
@@ -23,12 +23,12 @@
             background-size: 100% 100%;
         }
 
-        /* UI 레이어: 클릭이 바닥(게임판)으로 통과되도록 pointer-events: none 설정 */
+        /* UI 레이어: 투명한 벽 역할을 하지 않도록 pointer-events: none 설정 */
         #ui-layer {
             position: absolute;
             top: 0; left: 0;
             width: 100%; height: 100%;
-            pointer-events: none; 
+            pointer-events: none; /* 중요: 클릭 신호가 아래의 게임판으로 통과됨 */
             z-index: 100;
         }
 
@@ -39,13 +39,13 @@
             text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
         }
 
-        /* 리셋 버튼: 사이즈를 40px로 줄이고 오른쪽 상단에 배치 */
+        /* 리셋 버튼: 사이즈를 줄이고 클릭이 가능하도록 pointer-events: auto 설정 */
         #reset-btn {
             position: absolute;
             top: 15px; right: 15px;
-            width: 40px; height: auto;
+            width: 45px; height: auto;
             cursor: pointer;
-            pointer-events: auto; /* 버튼만 클릭 가능하게 설정 */
+            pointer-events: auto; /* 중요: 이 이미지만 따로 클릭을 인식함 */
             transition: transform 0.1s;
         }
 
@@ -105,4 +105,10 @@
         const wallOptions = { isStatic: true, render: { visible: false } };
         const ground = Bodies.rectangle(200, 595, 400, 10, wallOptions);
         const leftWall = Bodies.rectangle(40, 300, 10, 600, wallOptions);
-        const rightWall = Bodies.rectangle(360, 300,
+        const rightWall = Bodies.rectangle(360, 300, 10, 600, wallOptions);
+        Composite.add(world, [ground, leftWall, rightWall]);
+
+        const FRUITS = [
+            { radius: 20, score: 2 }, { radius: 30, score: 4 }, { radius: 45, score: 8 },
+            { radius: 55, score: 16 }, { radius: 70, score: 32 }, { radius: 85, score: 64 },
+            { radius:
