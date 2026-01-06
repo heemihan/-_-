@@ -87,6 +87,7 @@ function getInputX(e) {
 }
 
 // 6. 조작 로직 (터치 유지 시 이동, 떼면 낙하)
+
 function handleMove(e) {
     if (isDragging && currentFruit && !isGameOver) {
         let x = getInputX(e);
@@ -100,36 +101,53 @@ function handleMove(e) {
 }
 
 function handleStart(e) {
+    // 리셋 버튼 클릭 방지 및 드롭 가능 여부 확인
     if (e.target.id === 'reset-btn' || isGameOver || !canDrop) return;
+    
     isDragging = true;
-    handleMove(e); // 터치한 순간 그 위치로 즉시 이동
+    handleMove(e); // 터치/클릭한 위치로 과일 즉시 이동
 }
 
 function handleEnd(e) {
     if (isDragging && currentFruit) {
         isDragging = false;
-        canDrop = false; // 새로운 과일 생성 전까지 추가 드롭 방지
+        canDrop = false; // 새로운 과일 생성 전까지 추가 낙하 방지
         
-        // 손을 뗄 때 물리 엔진 활성화
+        // 물리 엔진 활성화 (정적 상태 해제)
         Body.setStatic(currentFruit, false);
         playSound('sound-drop');
 
         currentFruit = null;
-        setTimeout(spawnFruit, 1000); 
+        
+        // 1초 뒤 자동 생성 및 드롭 권한 복구
+        setTimeout(() => {
+            spawnFruit();
+        }, 1000);
     }
 }
 
-// 7. 이벤트 리스너 통합 관리 (중복 제거 및 최적화)
+// 7. 이벤트 리스너 통합 관리 (간섭 원천 차단)
 
-// PC 마우스
-container.addEventListener('mousedown', handleStart);
-window.addEventListener('mousemove', (e) => { if(isDragging) handleMove(e); });
-window.addEventListener('mouseup', handleEnd);
+// PC 마우스 (container에서 시작, window에서 추적)
+container.addEventListener('mousedown', (e) => {
+    handleStart(e);
+});
 
-// 모바일 터치
+window.addEventListener('mousemove', (e) => {
+    if (isDragging) handleMove(e);
+});
+
+window.addEventListener('mouseup', (e) => {
+    if (isDragging) handleEnd(e);
+});
+
+// 모바일 터치 (가장 중요한 부분)
 container.addEventListener('touchstart', (e) => {
     if (e.target.id === 'reset-btn') return;
-    if (e.cancelable) e.preventDefault(); // Ghost Click 방지
+    
+    // [핵심] 이 한 줄이 mousedown/click으로 전이되는 것을 막아 중복 낙하를 방지합니다.
+    if (e.cancelable) e.preventDefault(); 
+    
     handleStart(e);
 }, { passive: false });
 
@@ -139,8 +157,11 @@ container.addEventListener('touchmove', (e) => {
 }, { passive: false });
 
 container.addEventListener('touchend', (e) => {
+    // 터치 종료 시 낙하
     handleEnd(e);
 });
+
+
 
 // 8. 충돌(합성) 로직
 Events.on(engine, 'collisionStart', (event) => {
