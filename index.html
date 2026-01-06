@@ -63,7 +63,10 @@
     </style>
 </head>
 <body>
-
+<div id="ui-container" style="position: absolute; top: 20; right: 20; z-index: 10;">
+    <button id="skin-btn" onclick="toggleSkin()" style="padding: 10px; cursor: pointer;">스킨 변경</button>
+    <button id="reset-btn" onclick="resetGame()" style="padding: 10px; cursor: pointer;">다시 시작</button>
+</div>
     <div id="game-container">
         <div id="ui-layer">
             <div class="score-board">SCORE: <span id="score">0</span></div>
