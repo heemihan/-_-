@@ -100,6 +100,7 @@ function handleMove(e) {
         
         // 벽 안쪽 제한 (40px ~ 360px 사이)
         x = Math.max(40 + radius, Math.min(360 - radius, x));
+       
         Body.setPosition(currentFruit, { x: x, y: 80 });
     }
 }
@@ -116,12 +117,14 @@ function handleEnd(e) {
         isDragging = false;
         canDrop = false;
         
-        const droppedFruit = currentFruit;
-        currentFruit = null;
+        Body.setStatic(currentFruit, false);
+        playSound('sound-drop');
+
+      currentFruit = null;
       
       setTimeout(spawnFruit, 1000); 
     } else {
-      isDragging = false;
+        isDragging = false;
     }
 }
 
@@ -136,6 +139,7 @@ window.addEventListener('mouseup', handleEnd);
 container.addEventListener('touchstart', (e) => {
     if (e.target.id === 'reset-btn') return;
     if (e.cancelable) e.preventDefault(); 
+    
     handleStart(e);
 }, { passive: false });
 
