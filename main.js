@@ -79,16 +79,33 @@ window.resetGame = function() {
 }
 
 // 6. 마우스 이동 처리
-window.addEventListener('mousemove', (e) => {
+function handleInputMove(e) {
     if (currentFruit && currentFruit.isStatic && !isGameOver) {
-        const rect = render.canvas.getBoundingClientRect();
-        let x = e.clientX - rect.left;
+        let x = getInputX(e);
         const level = parseInt(currentFruit.label.split('_')[1]);
         const radius = FRUITS[level - 1].radius;
+        
+        // 벽 경계 보정 (좌우 40px 벽 두께 고려)
         x = Math.max(40 + radius, Math.min(360 - radius, x));
         Body.setPosition(currentFruit, { x: x, y: 80 });
+  container.addEventListener('mousemove', handleInputMove);
+container.addEventListener('touchmove', (e) => {
+    if (e.cancelable) e.preventDefault(); // 중요: 모바일 스크롤 및 지연 방지
+    handleInputMove(e);
+}, { passive: false });
+        
     }
 });
+
+container.addEventListener('mousedown', handleDrop);
+container.addEventListener('touchstart', (e) => {
+    // 리셋 버튼 클릭 시에는 과일 드롭 방지
+    if (e.target.id === 'reset-btn') return;
+    
+    if (e.cancelable) e.preventDefault();
+    handleDrop(e);
+}, { passive: false });
+
 
 // 7. 클릭 처리
 window.addEventListener('click', (e) => {
