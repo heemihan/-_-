@@ -147,48 +147,45 @@ function handleEnd() {
         };
 
 
-// 8. 충돌(합성) 로직
+// 8. 충돌(합성) 로직 부분 수정
 Events.on(engine, 'collisionStart', (event) => {
     event.pairs.forEach((pair) => {
         const { bodyA, bodyB } = pair;
         if (bodyA.label && bodyB.label && bodyA.label.startsWith('fruit_') && bodyA.label === bodyB.label) {
             if (bodyA.isMerging || bodyB.isMerging) return;
+            
             const level = parseInt(bodyA.label.split('_')[1]);
             if (level < 11) {
-                bodyA.isMerging = true; 
+                bodyA.isMerging = true;
                 bodyB.isMerging = true;
-                // 큐에 넣어서 afterUpdate 시점에 안전하게 처리
-                        mergeQueue.push({
-                            bodyA: bodyA,
-                            bodyB: bodyB,
-                            level: level,
-                            x: (bodyA.position.x + bodyB.position.x) / 2,
-                            y: (bodyA.position.y + bodyB.position.y) / 2
-                        });
-                    }
-                }
-            });
-        });
-
-        // --- 물리 업데이트 후 처리 (삭제/생성) ---
-        Events.on(engine, 'afterUpdate', () => {
-            if (mergeQueue.length > 0) {
-                mergeQueue.forEach((data) => {
-                    const { bodyA, bodyB, level, x, y } = data;
-                    
-                    const bodies = Composite.allBodies(world);
-                    if (bodies.includes(bodyA) && bodies.includes(bodyB)) {
-                        Composite.remove(world, [bodyA, bodyB]);
-                        
-                        const nextLevel = level + 1;
-                        const newFruit = createFruit(x, y, nextLevel);
-                        Composite.add(world, newFruit);
-
-                score += FRUITS[level - 1].score;
-                document.getElementById('score').innerText = score;
+                mergeQueue.push({
+                    bodyA, bodyB, level,
+                    x: (bodyA.position.x + bodyB.position.x) / 2,
+                    y: (bodyA.position.y + bodyB.position.y) / 2
+                });
             }
         }
     });
+});
+
+// --- 물리 업데이트 후 처리 수정 ---
+Events.on(engine, 'afterUpdate', () => {
+    while (mergeQueue.length > 0) {
+        const data = mergeQueue.shift(); // 하나씩 꺼내서 확실히 처리
+        const { bodyA, bodyB, level, x, y } = data;
+        
+        // 이미 월드에서 제거되었는지 확인 (중복 제거 방지)
+        if (Composite.allBodies(world).includes(bodyA) && Composite.allBodies(world).includes(bodyB)) {
+            Composite.remove(world, [bodyA, bodyB]);
+            
+            const nextLevel = level + 1;
+            const newFruit = createFruit(x, y, nextLevel);
+            Composite.add(world, newFruit);
+
+            score += FRUITS[level - 1].score;
+            document.getElementById('score').innerText = score;
+        }
+    }
 });
 
 // 9. 게임오버 체크
@@ -206,5 +203,8 @@ Events.on(engine, 'afterUpdate', () => {
 
 // 실행
 Render.run(render);
-Runner.run(Runner.create(), engine);
+const runner = Runner.create({
+    isFixed: true
+        });
+Runner.run(runner, engine);
 spawnFruit();
