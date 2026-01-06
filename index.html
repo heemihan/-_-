@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>수박 게임 - 통합 수정본</title>
+    <title>수박 게임 - 최종 수정본</title>
     <style>
         body {
             margin: 0; padding: 0;
@@ -12,54 +12,60 @@
             overflow: hidden; font-family: 'Pretendard', sans-serif;
         }
 
-        /* 캔버스가 늘어나지 않도록 크기를 고정합니다 */
-        #game-container {
+        /* 게임 영역을 화면 중앙에 고정 */
+        #game-outer {
             position: relative;
             width: 400px;
             height: 600px;
-            background-color: #ffeeb0;
             border: 4px solid #333;
             border-radius: 12px;
-            overflow: hidden; /* 캔버스가 튀어나가지 않게 설정 */
+            overflow: hidden;
+            background-color: #ffeeb0; /* 배경 이미지 로드 전 기본색 */
         }
 
-        /* 버튼들을 담는 레이어 */
+        /* UI 요소들을 위한 레이어 */
+        .ui-element {
+            position: absolute;
+            z-index: 10;
+            pointer-events: auto;
+        }
+
+        .score-board {
+            top: 20px; left: 20px;
+            color: #333; font-size: 24px; font-weight: 800;
+            pointer-events: none;
+        }
+
         .top-controls {
-            position: absolute; top: 15px; right: 15px;
+            top: 15px; right: 15px;
             display: flex; gap: 10px;
-            z-index: 101; /* 캔버스보다 위에 위치 */
         }
 
         .control-btn {
             width: 40px; height: 40px;
             cursor: pointer;
-            pointer-events: auto;
         }
 
-        .score-board {
-            position: absolute; top: 20px; left: 20px;
-            color: #333; font-size: 24px; font-weight: 800;
-            z-index: 101;
-            pointer-events: none;
-        }
-
-        /* Matter.js가 생성하는 캔버스 스타일 강제 고정 */
+        /* Matter.js가 생성하는 캔버스를 부모 크기에 맞춤 */
         canvas {
             display: block;
-            max-width: 100%;
-            max-height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
         }
     </style>
 </head>
 <body>
 
-    <div id="game-container">
-        <div class="score-board">SCORE: <span id="score">0</span></div>
+    <div id="game-outer">
+        <div class="ui-element score-board">SCORE: <span id="score">0</span></div>
         
-        <div class="top-controls">
+        <div class="ui-element top-controls">
             <img src="asset/imgchange.png" class="control-btn" onclick="toggleSkin()" alt="Skin">
             <img src="asset/resetGame.png" class="control-btn" onclick="resetGame()" alt="Reset">
         </div>
+        
+        <div id="game-container"></div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
@@ -69,8 +75,8 @@
         const engine = Engine.create();
         const world = engine.world;
         const container = document.getElementById('game-container');
+        const outer = document.getElementById('game-outer');
 
-        // 상태 변수
         let currentSkinType = 'A'; 
         const mergeQueue = []; 
         let score = 0;
@@ -85,7 +91,7 @@
             { radius: 157.5, score: 1024 }, { radius: 187.5, score: 2048 }
         ];
 
-        // 1. 렌더러 설정 (container 내부에 캔버스 생성)
+        // 1. 렌더러 설정 (배경 이미지 포함)
         const render = Render.create({
             element: container,
             engine: engine,
@@ -93,34 +99,32 @@
                 width: 400,
                 height: 600,
                 wireframes: false,
-                background: 'transparent'
+                background: 'asset/background.png' // 배경 이미지가 여기서 날아갔을 수 있으므로 직접 지정
             }
         });
 
-        // 2. 벽 생성
+        // 2. 벽 생성 (벽 두께를 늘려 안정성 확보)
         const wallOptions = { isStatic: true, render: { visible: false } };
         Composite.add(world, [
-            Bodies.rectangle(200, 595, 400, 10, wallOptions), // 바닥
-            Bodies.rectangle(5, 300, 10, 600, wallOptions),  // 왼쪽 벽
-            Bodies.rectangle(395, 300, 10, 600, wallOptions) // 오른쪽 벽
+            Bodies.rectangle(200, 610, 400, 30, wallOptions), // 바닥
+            Bodies.rectangle(-15, 300, 30, 600, wallOptions), // 왼쪽
+            Bodies.rectangle(415, 300, 30, 600, wallOptions)  // 오른쪽
         ]);
 
-        // 3. 과일 생성 함수
         function createFruit(x, y, level, isStatic = false) {
             const fruitData = FRUITS[level - 1];
             const indexStr = String(level - 1).padStart(2, '0'); 
             const prefix = (currentSkinType === 'A') ? 'fruit' : 'skinB_fruit';
-            const texturePath = `asset/${prefix}${indexStr}.png`; 
-
+            
             const fruit = Bodies.circle(x, y, fruitData.radius, {
                 label: `fruit_${level}`,
                 isStatic: isStatic,
                 restitution: 0.3,
                 render: {
                     sprite: {
-                        texture: texturePath,
-                        xScale: (fruitData.radius * 2) / 100, // 이미지 크기에 맞춰 조절이 필요할 수 있음
-                        yScale: (fruitData.radius * 2) / 100
+                        texture: `asset/${prefix}${indexStr}.png`,
+                        xScale: 1, // 이미지 원래 크기가 반지름과 맞지 않으면 이 값을 조정해야 함
+                        yScale: 1
                     }
                 }
             });
@@ -136,38 +140,28 @@
             canDrop = true;
         }
 
-        // 4. 스킨 변경 기능
-        window.toggleSkin = function() {
-            currentSkinType = (currentSkinType === 'A') ? 'B' : 'A';
-            const prefix = (currentSkinType === 'A') ? 'fruit' : 'skinB_fruit';
-            
-            const fruits = Composite.allBodies(world).filter(b => b.label && b.label.startsWith('fruit_'));
-            fruits.forEach(fruit => {
-                const level = fruit.label.split('_')[1];
-                const indexStr = String(level - 1).padStart(2, '0');
-                fruit.render.sprite.texture = `asset/${prefix}${indexStr}.png`;
-            });
-            
-            if (currentFruit) {
-                const level = currentFruit.label.split('_')[1];
-                const indexStr = String(level - 1).padStart(2, '0');
-                currentFruit.render.sprite.texture = `asset/${prefix}${indexStr}.png`;
-            }
-        };
-
-        // 5. 마우스 제어
-        container.addEventListener('mousemove', (e) => {
-            if (currentFruit && canDrop) {
+        // 3. 마우스 이동 로직 (좌표 오차 수정)
+        const handleMove = (e) => {
+            if (currentFruit && canDrop && !isGameOver) {
                 const rect = container.getBoundingClientRect();
-                let x = e.clientX - rect.left;
-                const radius = FRUITS[parseInt(currentFruit.label.split('_')[1]) - 1].radius;
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                let x = clientX - rect.left;
+                
+                const level = parseInt(currentFruit.label.split('_')[1]);
+                const radius = FRUITS[level - 1].radius;
+                
+                // 벽 안쪽으로 이동 제한
                 x = Math.max(radius + 10, Math.min(390 - radius, x));
                 Body.setPosition(currentFruit, { x: x, y: 80 });
             }
-        });
+        };
 
-        container.addEventListener('click', () => {
-            if (currentFruit && canDrop) {
+        // 이벤트 리스너를 컨테이너에 직접 연결
+        outer.addEventListener('mousemove', handleMove);
+        outer.addEventListener('touchmove', handleMove);
+
+        outer.addEventListener('click', () => {
+            if (currentFruit && canDrop && !isGameOver) {
                 canDrop = false;
                 Body.setStatic(currentFruit, false);
                 currentFruit = null;
@@ -175,7 +169,7 @@
             }
         });
 
-        // 6. 충돌 및 합성
+        // 4. 충돌 및 점수
         Events.on(engine, 'collisionStart', (event) => {
             event.pairs.forEach((pair) => {
                 const { bodyA, bodyB } = pair;
@@ -185,11 +179,7 @@
                     if (level < 11) {
                         bodyA.isMerging = true;
                         bodyB.isMerging = true;
-                        mergeQueue.push({
-                            bodyA, bodyB, level,
-                            x: (bodyA.position.x + bodyB.position.x) / 2,
-                            y: (bodyA.position.y + bodyB.position.y) / 2
-                        });
+                        mergeQueue.push({ bodyA, bodyB, level, x: (bodyA.position.x + bodyB.position.x) / 2, y: (bodyA.position.y + bodyB.position.y) / 2 });
                     }
                 }
             });
@@ -207,13 +197,22 @@
             }
         });
 
-        // 7. 게임 시작
-        Render.run(render);
-        const runner = Runner.create({ isFixed: true });
-        Runner.run(runner, engine);
-        spawnFruit();
+        window.toggleSkin = function() {
+            currentSkinType = (currentSkinType === 'A') ? 'B' : 'A';
+            const prefix = (currentSkinType === 'A') ? 'fruit' : 'skinB_fruit';
+            Composite.allBodies(world).forEach(body => {
+                if (body.label && body.label.startsWith('fruit_')) {
+                    const level = body.label.split('_')[1];
+                    body.render.sprite.texture = `asset/${prefix}${String(level-1).padStart(2,'0')}.png`;
+                }
+            });
+        };
 
         window.resetGame = () => location.reload();
+
+        Render.run(render);
+        Runner.run(Runner.create({ isFixed: true }), engine);
+        spawnFruit();
     </script>
 </body>
 </html>
