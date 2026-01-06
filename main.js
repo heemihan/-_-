@@ -24,7 +24,6 @@ const topSensorY = 100;
 
 Composite.add(world, [ground, leftWall, rightWall]);
 
-// 데이터 및 상태 변수
 const FRUITS = [
     { radius: 19, score: 2 }, { radius: 29, score: 4 }, { radius: 44, score: 8 },
     { radius: 54, score: 16 }, { radius: 69, score: 32 }, { radius: 84, score: 64 },
@@ -32,16 +31,12 @@ const FRUITS = [
     { radius: 159, score: 1024 }, { radius: 189, score: 2048 }
 ];
 
-// 상태 변수 
-
 let score = 0;
 let isGameOver = false;
 let currentFruit = null;
 let canDrop = false;
 let isDragging = false; 
 
-
-// 과일 생성 함수
 function createFruit(x, y, level, isStatic = false) {
     const fruitData = FRUITS[level - 1];
     const indexStr = String(level - 1).padStart(2, '0');
@@ -59,15 +54,20 @@ function createFruit(x, y, level, isStatic = false) {
     return fruit;
 }
 
+// 과일 생성 함수 (중괄호 문제 수정됨)
 function spawnFruit() {
     if (isGameOver) return;
-    canDrop = true;
+    
     const level = Math.floor(Math.random() * 3) + 1;
     currentFruit = createFruit(200, 80, level, true);
     Composite.add(world, currentFruit);
+    
+    canDrop = false;
+    setTimeout(() => {
+        canDrop = true;
+    }, 200); // 생성 직후 오작동 방지를 위해 약간의 대기 시간 부여
 }
 
-// 효과음 및 유틸리티
 function playSound(id) {
     const sound = document.getElementById(id);
     if (sound) {
@@ -78,69 +78,46 @@ function playSound(id) {
 
 function getInputX(e) {
     const rect = container.getBoundingClientRect();
-    let clientX;
-    if (e.touches && e.touches.length > 0) {
-        clientX = e.touches[0].clientX;
-    } else {
-        clientX = e.clientX;
-    }
+    const clientX = e.clientX || (e.touches && e.touches[0].clientX);
     return clientX - rect.left;
 }
-container.style.touchAction = 'none';
 
-// 6. 조작 로직 (Pointer Event 활용)
-
-function handleMove(e) {
-    if (isDragging && currentFruit && !isGameOver) {
-        let x = getInputX(e);
-        const level = parseInt(currentFruit.label.split('_')[1]);
-        const radius = FRUITS[level - 1].radius;
-        
-        // 벽 안쪽 제한 (40px ~ 360px 사이)
-        x = Math.max(40 + radius, Math.min(360 - radius, x));
-        
-        // 드래그 중에는 y 좌표를 고정하고 x만 이동
-        Body.setPosition(currentFruit, { x: x, y: 80 });
-    }
-}
-
+// 조작 로직
 function handleStart(e) {
-    if (e.target.id === 'reset-btn' || isGameOver || !canDrop || !currentFruit) return;
+    if (isGameOver || !canDrop || !currentFruit) return;
     isDragging = true;
     handleMove(e);
+}
+
+function handleMove(e) {
+    if (!isDragging || !currentFruit || isGameOver) return;
+
+    let x = getInputX(e);
+    const level = parseInt(currentFruit.label.split('_')[1]);
+    const radius = FRUITS[level - 1].radius;
+    
+    x = Math.max(40 + radius, Math.min(360 - radius, x));
+    Body.setPosition(currentFruit, { x: x, y: 80 });
 }
 
 function handleEnd(e) {
     if (isDragging && currentFruit) {
         isDragging = false;
         canDrop = false; 
-    
         Body.setStatic(currentFruit, false);
         playSound('sound-drop');
-
         currentFruit = null;
-        
         setTimeout(spawnFruit, 1000); 
     }
 }
 
-// 7. 이벤트 리스너 통합 관리 (Pointer Events)
+// 이벤트 리스너 (spawnFruit 밖으로 분리)
 container.style.touchAction = 'none'; 
-container.addEventListener('pointerdown', (e) => {
-    container.setPointerCapture(e.pointerId);
-    handleStart(e);
-});
+container.onpointerdown = handleStart;
+window.onpointermove = handleMove;
+window.onpointerup = handleEnd;
 
-window.addEventListener('pointermove', handleMove);
-
-window.addEventListener('pointerup', (e) => {
-    if (container.hasPointerCapture(e.pointerId)) {
-        container.releasePointerCapture(e.pointerId);
-    }
-    handleEnd(e);
-});
-
-// 충돌 및 게임오버 로직 
+// 충돌 로직
 Events.on(engine, 'collisionStart', (event) => {
     event.pairs.forEach((pair) => {
         const { bodyA, bodyB } = pair;
@@ -148,7 +125,8 @@ Events.on(engine, 'collisionStart', (event) => {
             if (bodyA.isMerging || bodyB.isMerging) return;
             const level = parseInt(bodyA.label.split('_')[1]);
             if (level < 11) {
-                bodyA.isMerging = true; bodyB.isMerging = true;
+                bodyA.isMerging = true; 
+                bodyB.isMerging = true;
                 const midX = (bodyA.position.x + bodyB.position.x) / 2;
                 const midY = (bodyA.position.y + bodyB.position.y) / 2;
                 playSound('sound-merge');
