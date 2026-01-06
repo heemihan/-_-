@@ -84,12 +84,15 @@ function getInputX(e) {
     return clientX - rect.left;
 }
 
-// 조작 로직 (수정됨)
+// 6. 조작 로직 (상태 잠금 강화)
+
 function handleMove(e) {
     if (isDragging && currentFruit && !isGameOver) {
         let x = getInputX(e);
         const level = parseInt(currentFruit.label.split('_')[1]);
         const radius = FRUITS[level - 1].radius;
+        
+        // 벽 안쪽 제한 (40px ~ 360px 사이)
         x = Math.max(40 + radius, Math.min(360 - radius, x));
         Body.setPosition(currentFruit, { x: x, y: 80 });
     }
@@ -97,32 +100,41 @@ function handleMove(e) {
 
 function handleStart(e) {
     if (e.target.id === 'reset-btn' || isGameOver || !canDrop) return;
-    isDragging = true; // 먼저 드래그 상태를 활성화
-    handleMove(e);     // 즉시 위치 업데이트
+    
+    isDragging = true;
+    handleMove(e); 
 }
 
 function handleEnd(e) {
-    // 드래그 중인 상태에서만 낙하 로직 실행
     if (isDragging && currentFruit) {
         isDragging = false;
-        canDrop = false; // 새로운 과일 생성 전까지 드롭 잠금
-        
-        Body.setStatic(currentFruit, false); // 손을 뗄 때만 낙하
+        canDrop = false; 
+        Body.setStatic(currentFruit, false);
         playSound('sound-drop');
 
         currentFruit = null;
-        setTimeout(spawnFruit, 1000); 
+        
+        // 낙하 후 1초 뒤 자동 생성
+        setTimeout(() => {
+            spawnFruit();
+        }, 1000);
     }
 }
 
-// 이벤트 리스너 통합 관리
+// 7. 이벤트 리스너 통합 관리 (터치-마우스 간섭 완전 차단)
+
+// PC 마우스
 container.addEventListener('mousedown', handleStart);
-window.addEventListener('mousemove', (e) => { if(isDragging) handleMove(e); });
+window.addEventListener('mousemove', (e) => {
+    if (isDragging) handleMove(e);
+});
 window.addEventListener('mouseup', handleEnd);
 
+// 모바일 터치 (터치하자마자 떨어지는 현상 방지의 핵심)
 container.addEventListener('touchstart', (e) => {
     if (e.target.id === 'reset-btn') return;
-    if (e.cancelable) e.preventDefault(); // 중요: 유령 클릭 방지
+    if (e.cancelable) e.preventDefault(); 
+    
     handleStart(e);
 }, { passive: false });
 
@@ -132,11 +144,11 @@ container.addEventListener('touchmove', (e) => {
 }, { passive: false });
 
 container.addEventListener('touchend', (e) => {
-    if (e.cancelable) e.preventDefault(); // 중요: 터치 종료 후 클릭 이벤트 발생 방지
+    if (e.cancelable) e.preventDefault();
     handleEnd(e);
 }, { passive: false });
 
-// 충돌 및 게임오버 로직 (기존과 동일)
+// 충돌 및 게임오버 로직 
 Events.on(engine, 'collisionStart', (event) => {
     event.pairs.forEach((pair) => {
         const { bodyA, bodyB } = pair;
