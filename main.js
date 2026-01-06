@@ -107,6 +107,7 @@ function handleEnd() {
         
         // 손을 뗄 때만 물리 엔진 활성화 (낙하)
         Body.setStatic(currentFruit, false);
+    setTimeout(spawnFruit, 1000);
         
         // 효과음 재생
         const sound = document.getElementById('sound-drop');
@@ -124,10 +125,15 @@ window.addEventListener('mouseup', handleEnd);
 
 container.addEventListener('touchstart', (e) => {
     if (e.target.id === 'reset-btn') return;
+    if (e.cancelable) e.preventDefault();
     e.preventDefault();
     handleStart(e);
 }, { passive: false });
 
+container.addEventListener('touchmove', (e) => {
+    if (e.cancelable) e.preventDefault();
+    handleMove(e);
+}, { passive: false });
 container.addEventListener('touchend', (e) => {
     e.preventDefault();
     handleEnd(e);
