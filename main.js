@@ -61,13 +61,10 @@ function createFruit(x, y, level, isStatic = false) {
 
 function spawnFruit() {
     if (isGameOver) return;
-    canDrop = false;
+    canDrop = true;
     const level = Math.floor(Math.random() * 3) + 1;
     currentFruit = createFruit(200, 80, level, true);
     Composite.add(world, currentFruit);
-    setTimeout(() => {
-        canDrop = true;
-    }, 100);
 }
 
 // 효과음 및 유틸리티
@@ -110,36 +107,36 @@ function handleMove(e) {
 function handleStart(e) {
     if (e.target.id === 'reset-btn' || isGameOver || !canDrop || !currentFruit) return;
     isDragging = true;
-    handleMove(e); 
+    handleMove(e);
 }
 
 function handleEnd(e) {
     if (isDragging && currentFruit) {
         isDragging = false;
-        canDrop = false;
+        canDrop = false; 
+    
         Body.setStatic(currentFruit, false);
         playSound('sound-drop');
 
         currentFruit = null;
+        
         setTimeout(spawnFruit, 1000); 
-    } else {
-        isDragging = false;
     }
 }
 
 // 7. 이벤트 리스너 통합 관리 (Pointer Events)
-
+container.style.touchAction = 'none'; 
 container.addEventListener('pointerdown', (e) => {
-    container.setPointerCapture(e.pointerId); 
+    container.setPointerCapture(e.pointerId);
     handleStart(e);
 });
 
-container.addEventListener('pointermove', (e) => {
-    handleMove(e);
-});
+window.addEventListener('pointermove', handleMove);
 
-container.addEventListener('pointerup', (e) => {
-    container.releasePointerCapture(e.pointerId);
+window.addEventListener('pointerup', (e) => {
+    if (container.hasPointerCapture(e.pointerId)) {
+        container.releasePointerCapture(e.pointerId);
+    }
     handleEnd(e);
 });
 
