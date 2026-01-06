@@ -33,9 +33,14 @@ document.addEventListener('DOMContentLoaded', () => {
             width: GAME_WIDTH,
             height: GAME_HEIGHT,
             wireframes: false,
-            background: 'asset/background.png' // 배경 경로 확인 필수
+            background: 'asset/background.png' 
         }
     });
+    render.canvas.style.width = GAME_WIDTH + "px";
+render.canvas.style.height = GAME_HEIGHT + "px";
+render.canvas.style.maxWidth = "100%"; // 모바일 대응용
+render.canvas.style.display = "block";
+render.canvas.style.margin = "0 auto";
 
     // 3. 벽 생성 (과일 추락 및 이탈 방지)
     const wallOptions = { isStatic: true, render: { visible: false } };
@@ -114,24 +119,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 6. 스킨 전환 (전역 노출)
     window.toggleSkin = function() {
-        currentSkinType = (currentSkinType === 'A') ? 'B' : 'A';
-        const prefix = (currentSkinType === 'A') ? 'fruit' : 'skinB_fruit';
+    currentSkinType = (currentSkinType === 'A') ? 'B' : 'A';
+    const prefix = (currentSkinType === 'A') ? 'fruit' : 'skinB_fruit';
+    
+    const fruits = Composite.allBodies(world).filter(b => b.label && b.label.startsWith('fruit_'));
+    fruits.forEach(fruit => {
+        const level = parseInt(fruit.label.split('_')[1]);
+        const indexStr = String(level - 1).padStart(2, '0');
         
-        // 현재 월드 내 모든 과일 텍스처 교체
-        const fruits = Composite.allBodies(world).filter(b => b.label && b.label.startsWith('fruit_'));
-        fruits.forEach(fruit => {
-            const level = fruit.label.split('_')[1];
-            const idx = String(level - 1).padStart(2, '0');
-            fruit.render.sprite.texture = `asset/${prefix}${idx}.png`;
-        });
+        // 텍스처 변경과 동시에 스케일 재확인
+        const scale = (FRUITS[level - 1].radius * 2) / 100;
+        fruit.render.sprite.texture = `asset/${prefix}${indexStr}.png`;
+        fruit.render.sprite.xScale = scale;
+        fruit.render.sprite.yScale = scale;
+    });
 
-        // 조준 중인 과일 교체
-        if (currentFruit) {
-            const level = currentFruit.label.split('_')[1];
-            const idx = String(level - 1).padStart(2, '0');
-            currentFruit.render.sprite.texture = `asset/${prefix}${idx}.png`;
-        }
-    };
+    // 현재 대기 중인 과일도 동일하게 처리
+    if (currentFruit) {
+        const level = parseInt(currentFruit.label.split('_')[1]);
+        const indexStr = String(level - 1).padStart(2, '0');
+        const scale = (FRUITS[level - 1].radius * 2) / 100;
+        currentFruit.render.sprite.texture = `asset/${prefix}${indexStr}.png`;
+        currentFruit.render.sprite.xScale = scale;
+        currentFruit.render.sprite.yScale = scale;
+    }
+};
 
     window.resetGame = () => location.reload();
 
