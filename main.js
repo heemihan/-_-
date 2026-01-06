@@ -123,7 +123,7 @@ function handleEnd(e) {
       currentFruit = null;
       
       currentFruit = null;
-        setTimeout(spawnFruit, 1000); 
+        setTimeout(spawnFruit, 0); 
     } else {
         isDragging = false;
     }
