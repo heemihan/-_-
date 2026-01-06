@@ -52,8 +52,10 @@ function getInputX(e) {
 function createFruit(x, y, level, isStatic = false) {
     const fruitData = FRUITS[level - 1];
     const indexStr = String(level - 1).padStart(2, '0'); 
-    const texturePath = `asset/fruit${indexStr}.png`; 
+    const texturePath = `asset/${currentSkinPrefix}${indexStr}.png`; 
 
+    const fruit = Bodies.circle(x, y, fruitData.radius, {
+        label: `fruit_${level}`,
     const fruit = Bodies.circle(x, y, fruitData.radius, {
         label: `fruit_${level}`,
         isStatic: isStatic,
@@ -77,7 +79,33 @@ function spawnFruit() {
     Composite.add(world, currentFruit);
     canDrop = true;
 }
+window.changeSkin = function(newPrefix) {
+    // 1. 앞으로 생성될 과일을 위해 접두사 변경
+    currentSkinPrefix = newPrefix;
 
+    // 2. 현재 월드에 존재하는 모든 과일의 이미지 교체
+    const allBodies = Composite.allBodies(world);
+    allBodies.forEach(body => {
+        if (body.label && body.label.startsWith('fruit_')) {
+            const level = parseInt(body.label.split('_')[1]);
+            const indexStr = String(level - 1).padStart(2, '0');
+            
+            // 이미지 경로 업데이트
+            body.render.sprite.texture = `asset/${currentSkinPrefix}${indexStr}.png`;
+        }
+    });
+};
+const skins = ['fruit', 'skinB_fruit']; // 사용할 스킨 리스트
+const levels = 11;
+
+// 게임 시작 전 실행
+skins.forEach(skin => {
+    for (let i = 0; i < levels; i++) {
+        const img = new Image();
+        const indexStr = String(i).padStart(2, '0');
+        img.src = `asset/${skin}${indexStr}.png`;
+    }
+});
 // 5. 리셋 함수
 window.resetGame = function() {
     const fruits = Composite.allBodies(world).filter(b => b.label && b.label.startsWith('fruit_'));
