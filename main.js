@@ -99,13 +99,19 @@ function handleStart(e) {
 }
 
 function handleEnd() {
-    if (isDragging && currentFruit && !isGameOver) {
+    if (isDragging && currentFruit) {
         isDragging = false;
-        canDrop = false;
+        canDrop = false; 
+        
+        // 손을 뗄 때만 물리 엔진 활성화 (낙하)
         Body.setStatic(currentFruit, false);
-        playSound('sound-drop'); // 효과음
+        
+        // 효과음 재생
+        const sound = document.getElementById('sound-drop');
+        if(sound) { sound.currentTime = 0; sound.play().catch(()=>{}); }
+
         currentFruit = null;
-        setTimeout(spawnFruit, 1000);
+        setTimeout(spawnFruit, 1000); 
     }
 }
 
