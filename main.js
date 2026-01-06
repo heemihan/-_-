@@ -32,11 +32,14 @@ const FRUITS = [
     { radius: 159, score: 1024 }, { radius: 189, score: 2048 }
 ];
 
+// 상태 변수 
+
 let score = 0;
 let isGameOver = false;
 let currentFruit = null;
 let canDrop = false;
 let isDragging = false; 
+
 
 // 과일 생성 함수
 function createFruit(x, y, level, isStatic = false) {
@@ -90,9 +93,7 @@ function getInputX(e) {
 // 6. 조작 로직 (상태 잠금 강화)
 
 function handleMove(e) {
-    if (isDragging && currentFruit && !isGameOver) {
-        if (e.cancelable) e.preventDefault();
-        
+   if (isDragging && currentFruit && currentFruit.isStatic && !isGameOver) {
         let x = getInputX(e);
         const level = parseInt(currentFruit.label.split('_')[1]);
         const radius = FRUITS[level - 1].radius;
@@ -104,21 +105,23 @@ function handleMove(e) {
 }
 
 function handleStart(e) {
-    if (e.target.id === 'reset-btn' || isGameOver || !canDrop) return;
+    if (e.target.id === 'reset-btn' || isGameOver || !canDrop || !currentFruit) return;
+    
     isDragging = true;
     handleMove(e);
 }
 
 function handleEnd(e) {
-    if (isDragging && currentFruit) {
+  if (isDragging && currentFruit && currentFruit.isStatic) {
         isDragging = false;
         canDrop = false;
         
-        Body.setStatic(currentFruit, false);
-        playSound('sound-drop');
-
+        const droppedFruit = currentFruit;
         currentFruit = null;
-        setTimeout(spawnFruit, 1000); 
+      
+      setTimeout(spawnFruit, 1000); 
+    } else {
+      isDragging = false;
     }
 }
 
@@ -145,6 +148,7 @@ container.addEventListener('touchend', (e) => {
     if (e.cancelable) e.preventDefault();
     handleEnd(e);
 }, { passive: false });
+
 
 
 // 충돌 및 게임오버 로직 
