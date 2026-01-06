@@ -3,7 +3,7 @@ const { Engine, Render, Runner, Bodies, Composite, Events, Body } = Matter;
 const engine = Engine.create();
 const world = engine.world;
 const container = document.getElementById('game-container');
-
+let currentSkinType = 'A'
 let currentSkinPrefix = "fruit";
 
 // 1. 렌더러 설정
@@ -97,7 +97,60 @@ window.changeSkin = function(newPrefix) {
 };
 const skins = ['fruit', 'skinB_fruit']; // 사용할 스킨 리스트
 const levels = 11;
+// 2. 스킨 전환 함수
+window.toggleSkin = function() {
+    // 스킨 타입 스위칭
+    currentSkinType = (currentSkinType === 'A') ? 'B' : 'A';
+    
+    // 접두사 결정 (파일 이름 규칙에 맞게 설정하세요)
+    // A타입: fruit00.png, B타입: skinB_fruit00.png 로 가정
+    const prefix = (currentSkinType === 'A') ? 'fruit' : 'skinB_fruit';
+    
+    // 월드에 이미 존재하는 모든 과일의 이미지 변경
+    const fruits = Composite.allBodies(world).filter(b => b.label && b.label.startsWith('fruit_'));
+    
+    fruits.forEach(fruit => {
+        const level = parseInt(fruit.label.split('_')[1]);
+        const indexStr = String(level - 1).padStart(2, '0');
+        
+        // 텍스처 경로 업데이트
+        fruit.render.sprite.texture = `asset/${prefix}${indexStr}.png`;
+    });
 
+    // 현재 대기 중인(손에 들린) 과일도 즉시 변경
+    if (currentFruit) {
+        const level = parseInt(currentFruit.label.split('_')[1]);
+        const indexStr = String(level - 1).padStart(2, '0');
+        currentFruit.render.sprite.texture = `asset/${prefix}${indexStr}.png`;
+    }
+    
+    console.log(`스킨이 ${currentSkinType} 타입으로 변경되었습니다.`);
+};
+
+// 3. 기존 createFruit 함수 내부 수정 (생성 시 현재 스킨 적용)
+function createFruit(x, y, level, isStatic = false) {
+    const fruitData = FRUITS[level - 1];
+    const indexStr = String(level - 1).padStart(2, '0'); 
+    
+    // 현재 스킨 타입에 따른 경로 설정
+    const prefix = (currentSkinType === 'A') ? 'fruit' : 'skinB_fruit';
+    const texturePath = `asset/${prefix}${indexStr}.png`; 
+
+    const fruit = Bodies.circle(x, y, fruitData.radius, {
+        label: `fruit_${level}`,
+        isStatic: isStatic,
+        restitution: 0.3,
+        render: {
+            sprite: {
+                texture: texturePath,
+                xScale: 1,
+                yScale: 1
+            }
+        }
+    });
+    fruit.isMerging = false;
+    return fruit;
+}
 // 게임 시작 전 실행
 skins.forEach(skin => {
     for (let i = 0; i < levels; i++) {
