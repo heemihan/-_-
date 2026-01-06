@@ -37,7 +37,7 @@ let score = 0;
 let isGameOver = false;
 let currentFruit = null;
 let canDrop = true;
-let isDragging = false; // 드래그 상태 확인용
+let isDragging = false; // 한 번만 선언
 
 // 4. 과일 생성 함수
 function createFruit(x, y, level, isStatic = false) {
@@ -80,13 +80,13 @@ function getInputX(e) {
     return clientX - rect.left;
 }
 
-// 6. 조작 로직 (터치 유지 시 이동, 떼면 낙하)
+// 6. 조작 로직 (수정됨)
 function handleMove(e) {
     if (isDragging && currentFruit && !isGameOver) {
         let x = getInputX(e);
         const level = parseInt(currentFruit.label.split('_')[1]);
         const radius = FRUITS[level - 1].radius;
-        // 좌우 벽 안쪽으로만 움직이게 제한
+        // 좌우 벽 안쪽 제한
         x = Math.max(40 + radius, Math.min(360 - radius, x));
         Body.setPosition(currentFruit, { x: x, y: 80 });
     }
@@ -95,30 +95,25 @@ function handleMove(e) {
 function handleStart(e) {
     if (e.target.id === 'reset-btn' || isGameOver || !canDrop) return;
     isDragging = true;
-    handleMove(e); // 터치한 위치로 즉시 이동
+    handleMove(e); 
 }
 
-function handleEnd() {
-    if (isDragging && currentFruit) 
-        handleMove(e); 
-        
+function handleEnd(e) {
+    if (isDragging && currentFruit) {
         isDragging = false;
-        canDrop = false;
+        canDrop = false; 
         
-        // 손을 뗄 때만 물리 엔진 활성화 (낙하)
+        // 물리 엔진 활성화 및 낙하
         Body.setStatic(currentFruit, false);
-    setTimeout(spawnFruit, 1000);
         
-        // 효과음 재생
-        const sound = document.getElementById('sound-drop');
-        if(sound) { sound.currentTime = 0; sound.play().catch(()=>{}); }
+        playSound('sound-drop');
 
         currentFruit = null;
-        setTimeout(spawnFruit, 1000); 
+        setTimeout(spawnFruit, 1000); // 1초 뒤 재생성
     }
 }
 
-// 이벤트 리스너 등록 (마우스/터치 통합)
+// 7. 이벤트 리스너 통합 관리
 container.addEventListener('mousedown', handleStart);
 window.addEventListener('mousemove', handleMove);
 window.addEventListener('mouseup', handleEnd);
@@ -126,7 +121,6 @@ window.addEventListener('mouseup', handleEnd);
 container.addEventListener('touchstart', (e) => {
     if (e.target.id === 'reset-btn') return;
     if (e.cancelable) e.preventDefault();
-    e.preventDefault();
     handleStart(e);
 }, { passive: false });
 
@@ -134,17 +128,10 @@ container.addEventListener('touchmove', (e) => {
     if (e.cancelable) e.preventDefault();
     handleMove(e);
 }, { passive: false });
+
 container.addEventListener('touchend', (e) => {
-    e.preventDefault();
     handleEnd(e);
 }, { passive: false });
-
-container.addEventListener('touchend', handleEnd);
-
-// 7. 리셋 함수
-window.resetGame = function() {
-    location.reload(); // 가장 깔끔한 리셋 방법
-}
 
 // 8. 충돌(합성) 로직
 Events.on(engine, 'collisionStart', (event) => {
@@ -187,3 +174,7 @@ Events.on(engine, 'afterUpdate', () => {
 Render.run(render);
 Runner.run(Runner.create(), engine);
 spawnFruit();
+
+window.resetGame = function() {
+    location.reload();
+}
