@@ -140,9 +140,12 @@ function handleEnd() {
         if(sound) { sound.currentTime = 0; sound.play().catch(()=>{}); }
 
         currentFruit = null;
-        setTimeout(spawnFruit, 1000); // 1초 뒤 다음 과일 생성
-    }
-}
+        // 1초 뒤 다음 과일 스폰
+            setTimeout(() => {
+                spawnFruit();
+            }, 1000);
+        };
+
 
 // 8. 충돌(합성) 로직
 Events.on(engine, 'collisionStart', (event) => {
@@ -154,13 +157,32 @@ Events.on(engine, 'collisionStart', (event) => {
             if (level < 11) {
                 bodyA.isMerging = true; 
                 bodyB.isMerging = true;
-                const midX = (bodyA.position.x + bodyB.position.x) / 2;
-                const midY = (bodyA.position.y + bodyB.position.y) / 2;
-                setTimeout(() => {
-                    Composite.remove(world, [bodyA, bodyB]);
-                    const nextFruit = createFruit(midX, midY, level + 1);
-                    Composite.add(world, nextFruit);
-                }, 0);
+                // 큐에 넣어서 afterUpdate 시점에 안전하게 처리
+                        mergeQueue.push({
+                            bodyA: bodyA,
+                            bodyB: bodyB,
+                            level: level,
+                            x: (bodyA.position.x + bodyB.position.x) / 2,
+                            y: (bodyA.position.y + bodyB.position.y) / 2
+                        });
+                    }
+                }
+            });
+        });
+
+        // --- 물리 업데이트 후 처리 (삭제/생성) ---
+        Events.on(engine, 'afterUpdate', () => {
+            if (mergeQueue.length > 0) {
+                mergeQueue.forEach((data) => {
+                    const { bodyA, bodyB, level, x, y } = data;
+                    
+                    const bodies = Composite.allBodies(world);
+                    if (bodies.includes(bodyA) && bodies.includes(bodyB)) {
+                        Composite.remove(world, [bodyA, bodyB]);
+                        
+                        const nextLevel = level + 1;
+                        const newFruit = createFruit(x, y, nextLevel);
+                        Composite.add(world, newFruit);
 
                 score += FRUITS[level - 1].score;
                 document.getElementById('score').innerText = score;
