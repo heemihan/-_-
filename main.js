@@ -122,23 +122,25 @@ render.canvas.style.margin = "0 auto";
     currentSkinType = (currentSkinType === 'A') ? 'B' : 'A';
     const prefix = (currentSkinType === 'A') ? 'fruit' : 'skinB_fruit';
     
-    const fruits = Composite.allBodies(world).filter(b => b.label && b.label.startsWith('fruit_'));
+   const fruits = Composite.allBodies(world).filter(b => b.label && b.label.startsWith('fruit_'));
+    
     fruits.forEach(fruit => {
         const level = parseInt(fruit.label.split('_')[1]);
         const indexStr = String(level - 1).padStart(2, '0');
         
-        // 텍스처 변경과 동시에 스케일 재확인
+        // 해당 레벨의 반지름에 맞는 스케일 재계산
         const scale = (FRUITS[level - 1].radius * 2) / 100;
+        
         fruit.render.sprite.texture = `asset/${prefix}${indexStr}.png`;
         fruit.render.sprite.xScale = scale;
         fruit.render.sprite.yScale = scale;
     });
 
-    // 현재 대기 중인 과일도 동일하게 처리
+    // 조준 중인 과일도 즉시 업데이트
     if (currentFruit) {
         const level = parseInt(currentFruit.label.split('_')[1]);
-        const indexStr = String(level - 1).padStart(2, '0');
         const scale = (FRUITS[level - 1].radius * 2) / 100;
+        const indexStr = String(level - 1).padStart(2, '0');
         currentFruit.render.sprite.texture = `asset/${prefix}${indexStr}.png`;
         currentFruit.render.sprite.xScale = scale;
         currentFruit.render.sprite.yScale = scale;
@@ -203,4 +205,8 @@ render.canvas.style.margin = "0 auto";
     const runner = Runner.create({ isFixed: true });
     Runner.run(runner, engine);
     spawnFruit();
+    render.canvas.style.width = "400px";
+render.canvas.style.height = "600px";
+render.canvas.style.maxWidth = "400px"; // 시각적 늘어남 방지
+render.canvas.style.margin = "0 auto";
 });
