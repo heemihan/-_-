@@ -120,7 +120,7 @@ window.addEventListener('mouseup', handleEnd);
 
 container.addEventListener('touchstart', (e) => {
     if (e.target.id === 'reset-btn') return;
-    if (e.cancelable) e.preventDefault();
+    if (e.cancelable) e.preventDefault(); 
     handleStart(e);
 }, { passive: false });
 
@@ -131,7 +131,7 @@ container.addEventListener('touchmove', (e) => {
 
 container.addEventListener('touchend', (e) => {
     handleEnd(e);
-}, { passive: false });
+});
 
 // 8. 충돌(합성) 로직
 Events.on(engine, 'collisionStart', (event) => {
