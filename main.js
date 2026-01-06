@@ -72,49 +72,59 @@ function spawnFruit() {
 
 function getInputX(e) {
     const rect = container.getBoundingClientRect();
-    const clientX = e.clientX || (e.touches && e.touches[0].clientX);
-    return clientX - rect.left;
+    // PointerEvent는 clientX를 공통으로 사용합니다.
+    return (e.clientX || (e.touches && e.touches[0].clientX)) - rect.left;
 }
 
 // 2. 조작 로직 (상태 엄격 관리)
-function handleStart(e) {
+const handleStart = (e) => {
     if (isGameOver || !canDrop || !currentFruit) return;
     isDragging = true;
     handleMove(e);
-}
+};
 
-function handleMove(e) {
-    if (!isDragging || !currentFruit || isGameOver) return;
-
-    let x = getInputX(e);
-    const level = parseInt(currentFruit.label.split('_')[1]);
-    const radius = FRUITS[level - 1].radius;
-    
-    x = Math.max(40 + radius, Math.min(360 - radius, x));
-    
-    // 드래그 중에는 y좌표 80에 강제 고정
-    Body.setPosition(currentFruit, { x: x, y: 80 });
-}
-
-function handleEnd(e) {
-    if (isDragging && currentFruit) {
-        isDragging = false;
-        canDrop = false; 
-        
-        // 오직 손을 뗄 때만 물리 엔진을 활성화(낙하)
-        Body.setStatic(currentFruit, false);
-        playSound('sound-drop');
-        
-        currentFruit = null;
-        setTimeout(spawnFruit, 1000); 
+const handleMove = (e) => {
+    if (isDragging && currentFruit && !isGameOver) {
+        let x = getInputX(e);
+        const level = parseInt(currentFruit.label.split('_')[1]);
+        const radius = FRUITS[level - 1].radius;
+        // 벽 제한 (40~360 사이 계산)
+        x = Math.max(40 + radius, Math.min(360 - radius, x));
+        Body.setPosition(currentFruit, { x: x, y: 80 });
     }
-}
+};
+
+const handleEnd = (e) => {
+    if (isDragging && currentFruit && canDrop && !isGameOver) {
+        isDragging = false;
+        canDrop = false;
+        
+        // 뗄 때만 물리 엔진 활성화
+        Body.setStatic(currentFruit, false);
+        currentFruit = null;
+        
+        // 1초 뒤 다음 과일 생성
+        setTimeout(spawnFruit, 1000);
+    }
+};
 
 // 3. 이벤트 리스너 등록 (가장 중요: 중복 방지 및 캡처)
 container.style.touchAction = 'none'; 
-container.onpointerdown = handleStart;
-window.onpointermove = handleMove;
-window.onpointerup = handleEnd;
+
+container.addEventListener('pointerdown', (e) => {
+    if (e.target.id === 'reset-btn') return;
+    container.setPointerCapture(e.pointerId); 
+    handleStart(e);
+});
+
+window.addEventListener('pointermove', handleMove);
+
+window.addEventListener('pointerup', (e) => {
+    if (isDragging) {
+        container.releasePointerCapture(e.pointerId);
+        handleEnd(e);
+    }
+});
 
 // 4. 충돌 및 유틸리티 (기존과 동일)
 function playSound(id) {
