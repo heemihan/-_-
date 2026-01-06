@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>수박 게임 - 최종 복구본</title>
+    <title>수박 게임 - 성능 및 스킨 최적화본</title>
     <style>
         body {
             margin: 0; padding: 0;
@@ -42,12 +42,21 @@
             z-index: 101;
         }
 
+        /* 스킨 변경 버튼 스타일 */
+        .skin-controls {
+            position: absolute; bottom: 10px; left: 10px;
+            pointer-events: auto; z-index: 105;
+        }
+        .skin-controls button {
+            padding: 5px 10px; cursor: pointer; background: #333; color: white; border: none; border-radius: 5px;
+        }
+
         .game-over {
             position: absolute; top: 50%; left: 50%;
             transform: translate(-50%, -50%);
             background: rgba(0, 0, 0, 0.85); color: white;
             padding: 40px; text-align: center; border-radius: 20px;
-            display: none; z-index: 200;
+            display: none; z-index: 200; pointer-events: auto;
         }
 
         canvas { display: block; position: absolute; top: 0; left: 0; }
@@ -59,169 +68,6 @@
         <div id="ui-layer">
             <div class="score-board">SCORE: <span id="score">0</span></div>
             <img src="asset/resetGame.png" id="reset-btn" onclick="resetGame()" alt="Reset">
-        </div>
-        <div id="game-over" class="game-over">
-            <h1>GAME OVER</h1>
-            <p>최종 점수: <span id="final-score">0</span></p>
-            <button onclick="resetGame()">다시 도전</button>
-        </div>
-    </div>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
-
-    <script>
-        const { Engine, Render, Runner, Bodies, Composite, Events, Body } = Matter;
-
-        const engine = Engine.create();
-        const world = engine.world;
-        const container = document.getElementById('game-container');
-
-        const render = Render.create({
-            element: container,
-            engine: engine,
-            options: {
-                width: 400, height: 600,
-                wireframes: false, background: 'transparent'
-            }
-        });
-
-        const wallOptions = { isStatic: true, render: { visible: false } };
-        const groundY = 550; 
-        const ground = Bodies.rectangle(200, groundY + 30, 400, 60, wallOptions);
-        const leftWall = Bodies.rectangle(40, 300, 10, 600, wallOptions);
-        const rightWall = Bodies.rectangle(360, 300, 10, 600, wallOptions);
-        const topSensorY = 130; 
-
-        Composite.add(world, [ground, leftWall, rightWall]);
-
-        const FRUITS = [
-            { radius: 20, score: 2 }, { radius: 30, score: 4 }, { radius: 45, score: 8 },
-            { radius: 55, score: 16 }, { radius: 70, score: 32 }, { radius: 85, score: 64 },
-            { radius: 100, score: 128 }, { radius: 120, score: 256 }, { radius: 140, score: 512 },
-            { radius: 160, score: 1024 }, { radius: 190, score: 2048 }
-        ];
-
-        let score = 0;
-        let isGameOver = false;
-        let currentFruit = null;
-        let canDrop = true;
-
-        // 과일 생성 함수 보완
-        function createFruit(x, y, level, isStatic = false) {
-            const fruitData = FRUITS[level - 1];
-            const indexStr = String(level - 1).padStart(2, '0');
-            // 경로를 명확하게 지정
-            const texturePath = './asset/fruit' + indexStr + '.png';
-
-            const fruit = Bodies.circle(x, y, fruitData.radius, {
-                label: 'fruit_' + level,
-                isStatic: isStatic,
-                restitution: 0.3, friction: 0.1,
-                render: { 
-                    sprite: { 
-                        texture: texturePath, 
-                        xScale: 1, 
-                        yScale: 1 
-                    } 
-                }
-            });
-            fruit.isMerging = false;
-            return fruit;
-        }
-
-        function spawnFruit() {
-            if (isGameOver) return;
-            const level = Math.floor(Math.random() * 3) + 1;
-            currentFruit = createFruit(200, 80, level, true);
-            Composite.add(world, currentFruit);
-            canDrop = true;
-        }
-
-        window.resetGame = function() {
-            const fruits = Composite.allBodies(world).filter(b => b.label && b.label.startsWith('fruit_'));
-            Composite.remove(world, fruits);
-            score = 0; isGameOver = false;
-            document.getElementById('score').innerText = '0';
-            document.getElementById('game-over').style.display = 'none';
-            spawnFruit();
-        };
-
-        function getInputX(e) {
-            const rect = container.getBoundingClientRect();
-            // 터치와 마우스 좌표를 모두 고려
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            return clientX - rect.left;
-        }
-
-        const handleMove = (e) => {
-            if (currentFruit && currentFruit.isStatic && !isGameOver) {
-                let x = getInputX(e);
-                const level = parseInt(currentFruit.label.split('_')[1]);
-                const radius = FRUITS[level - 1].radius;
-                x = Math.max(45 + radius, Math.min(355 - radius, x));
-                Body.setPosition(currentFruit, { x: x, y: 80 });
-            }
-        };
-
-        const handleDrop = (e) => {
-            if (e.target && e.target.id === 'reset-btn') return;
-            if (currentFruit && canDrop && !isGameOver) {
-                canDrop = false;
-                Body.setStatic(currentFruit, false);
-                currentFruit = null;
-                setTimeout(spawnFruit, 1000);
-            }
-        };
-
-        // 이벤트 리스너 통합 관리
-        window.addEventListener('mousemove', handleMove);
-        window.addEventListener('touchmove', (e) => {
-            if(e.cancelable) e.preventDefault();
-            handleMove(e);
-        }, { passive: false });
-
-        window.addEventListener('mousedown', handleDrop);
-        window.addEventListener('touchend', (e) => {
-            // 터치 시 리셋 버튼인 경우 무시하고 버튼 클릭만 실행되게 함
-            if(e.target.id === 'reset-btn') return;
-            handleDrop(e);
-        }, { passive: false });
-
-        Events.on(engine, 'collisionStart', (event) => {
-            event.pairs.forEach((pair) => {
-                const { bodyA, bodyB } = pair;
-                if (bodyA.label && bodyB.label && bodyA.label.startsWith('fruit_') && bodyA.label === bodyB.label) {
-                    if (bodyA.isMerging || bodyB.isMerging) return;
-                    const level = parseInt(bodyA.label.split('_')[1]);
-                    if (level < 11) {
-                        bodyA.isMerging = true; bodyB.isMerging = true;
-                        const midX = (bodyA.position.x + bodyB.position.x) / 2;
-                        const midY = (bodyA.position.y + bodyB.position.y) / 2;
-                        Composite.remove(world, [bodyA, bodyB]);
-                        Composite.add(world, createFruit(midX, midY, level + 1));
-                        score += FRUITS[level - 1].score;
-                        document.getElementById('score').innerText = score;
-                    }
-                }
-            });
-        });
-
-        Events.on(engine, 'afterUpdate', () => {
-            if (!isGameOver && !canDrop) {
-                const fruits = Composite.allBodies(world).filter(b => b.label && b.label.startsWith('fruit_') && !b.isStatic);
-                for (let fruit of fruits) {
-                    if (fruit.position.y < topSensorY && Math.abs(fruit.velocity.y) < 0.2) {
-                        isGameOver = true;
-                        document.getElementById('game-over').style.display = 'block';
-                        document.getElementById('final-score').innerText = score;
-                    }
-                }
-            }
-        });
-
-        Render.run(render);
-        Runner.run(Runner.create(), engine);
-        spawnFruit();
-    </script>
-</body>
-</html>
+            
+            <div class="skin-controls">
+                <button onclick="changeSkin('fruit')">기본</button
