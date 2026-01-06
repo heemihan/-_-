@@ -35,7 +35,7 @@ const FRUITS = [
 let score = 0;
 let isGameOver = false;
 let currentFruit = null;
-let canDrop = true;
+let canDrop = false;
 let isDragging = false; 
 
 // 과일 생성 함수
@@ -58,10 +58,13 @@ function createFruit(x, y, level, isStatic = false) {
 
 function spawnFruit() {
     if (isGameOver) return;
+    canDrop = false;
     const level = Math.floor(Math.random() * 3) + 1;
     currentFruit = createFruit(200, 80, level, true);
     Composite.add(world, currentFruit);
-    canDrop = true; 
+    setTimeout(() => {
+        canDrop = true;
+    }, 100);
 }
 
 // 효과음 및 유틸리티
@@ -88,6 +91,8 @@ function getInputX(e) {
 
 function handleMove(e) {
     if (isDragging && currentFruit && !isGameOver) {
+        if (e.cancelable) e.preventDefault();
+        
         let x = getInputX(e);
         const level = parseInt(currentFruit.label.split('_')[1]);
         const radius = FRUITS[level - 1].radius;
@@ -100,41 +105,34 @@ function handleMove(e) {
 
 function handleStart(e) {
     if (e.target.id === 'reset-btn' || isGameOver || !canDrop) return;
-    
     isDragging = true;
-    handleMove(e); 
+    handleMove(e);
 }
 
 function handleEnd(e) {
     if (isDragging && currentFruit) {
         isDragging = false;
-        canDrop = false; 
+        canDrop = false;
+        
         Body.setStatic(currentFruit, false);
         playSound('sound-drop');
 
         currentFruit = null;
-        
-        // 낙하 후 1초 뒤 자동 생성
-        setTimeout(() => {
-            spawnFruit();
-        }, 1000);
+        setTimeout(spawnFruit, 1000); 
     }
 }
 
 // 7. 이벤트 리스너 통합 관리 (터치-마우스 간섭 완전 차단)
 
-// PC 마우스
+// PC용
 container.addEventListener('mousedown', handleStart);
-window.addEventListener('mousemove', (e) => {
-    if (isDragging) handleMove(e);
-});
+window.addEventListener('mousemove', (e) => { if(isDragging) handleMove(e); });
 window.addEventListener('mouseup', handleEnd);
 
-// 모바일 터치 (터치하자마자 떨어지는 현상 방지의 핵심)
+// 모바일용
 container.addEventListener('touchstart', (e) => {
     if (e.target.id === 'reset-btn') return;
     if (e.cancelable) e.preventDefault(); 
-    
     handleStart(e);
 }, { passive: false });
 
@@ -147,6 +145,7 @@ container.addEventListener('touchend', (e) => {
     if (e.cancelable) e.preventDefault();
     handleEnd(e);
 }, { passive: false });
+
 
 // 충돌 및 게임오버 로직 
 Events.on(engine, 'collisionStart', (event) => {
