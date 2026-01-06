@@ -126,10 +126,11 @@ function handleEnd(e) {
     }
 }
 
-// 7. 이벤트 리스너 통합 관리 (간섭 원천 차단)
+// 7. 이벤트 리스너 통합 관리 (더 견고하게 수정)
 
-// PC 마우스 (container에서 시작, window에서 추적)
+// PC 마우스용 리스너 (모바일에서는 실행되지 않도록 처리)
 container.addEventListener('mousedown', (e) => {
+    if (e.button !== 0) return; // 왼쪽 클릭만 허용
     handleStart(e);
 });
 
@@ -141,11 +142,11 @@ window.addEventListener('mouseup', (e) => {
     if (isDragging) handleEnd(e);
 });
 
-// 모바일 터치 (가장 중요한 부분)
+// 모바일 터치용 리스너 (핵심 보정)
 container.addEventListener('touchstart', (e) => {
     if (e.target.id === 'reset-btn') return;
     
-    // [핵심] 이 한 줄이 mousedown/click으로 전이되는 것을 막아 중복 낙하를 방지합니다.
+    // [보정] mousedown 이벤트가 뒤따라 발생하는 것을 완벽히 차단
     if (e.cancelable) e.preventDefault(); 
     
     handleStart(e);
@@ -157,9 +158,10 @@ container.addEventListener('touchmove', (e) => {
 }, { passive: false });
 
 container.addEventListener('touchend', (e) => {
-    // 터치 종료 시 낙하
+    // [보정] touchend에서도 preventDefault를 추가하여 유령 클릭(click) 방지
+    if (e.cancelable) e.preventDefault(); 
     handleEnd(e);
-});
+}, { passive: false });
 
 
 
