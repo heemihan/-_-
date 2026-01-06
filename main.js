@@ -27,17 +27,17 @@ Composite.add(world, [ground, leftWall, rightWall]);
 
 // 3. 데이터 및 상태 변수
 const FRUITS = [
-    { radius: 20, score: 2 }, { radius: 30, score: 4 }, { radius: 45, score: 8 },
-    { radius: 55, score: 16 }, { radius: 70, score: 32 }, { radius: 85, score: 64 },
-    { radius: 100, score: 128 }, { radius: 120, score: 256 }, { radius: 140, score: 512 },
-    { radius: 160, score: 1024 }, { radius: 190, score: 2048 }
+    { radius: 19, score: 2 }, { radius: 29, score: 4 }, { radius: 44, score: 8 },
+    { radius: 54, score: 16 }, { radius: 69, score: 32 }, { radius: 84, score: 64 },
+    { radius: 99, score: 128 }, { radius: 119, score: 256 }, { radius: 139, score: 512 },
+    { radius: 159, score: 1024 }, { radius: 189, score: 2048 }
 ];
 
 let score = 0;
 let isGameOver = false;
 let currentFruit = null;
 let canDrop = true;
-let isDragging = false; // 한 번만 선언
+let isDragging = false;
 
 // 4. 과일 생성 함수
 function createFruit(x, y, level, isStatic = false) {
@@ -82,7 +82,7 @@ function getInputX(e) {
 
 // 6. 조작 로직 (수정됨)
 function handleMove(e) {
-    if (isDragging && currentFruit && !isGameOver) {
+   if (isDragging && currentFruit && !isGameOver) {
         let x = getInputX(e);
         const level = parseInt(currentFruit.label.split('_')[1]);
         const radius = FRUITS[level - 1].radius;
@@ -101,23 +101,27 @@ function handleStart(e) {
 function handleEnd(e) {
     if (isDragging && currentFruit) {
         isDragging = false;
-        canDrop = false; 
+        canDrop = false; //
         
         // 물리 엔진 활성화 및 낙하
         Body.setStatic(currentFruit, false);
+        playSound('sound-drop');
         
         playSound('sound-drop');
 
         currentFruit = null;
-        setTimeout(spawnFruit, 1000); // 1초 뒤 재생성
+        setTimeout(spawnFruit, 1000); 
     }
 }
 
 // 7. 이벤트 리스너 통합 관리
-container.addEventListener('mousedown', handleStart);
-window.addEventListener('mousemove', handleMove);
-window.addEventListener('mouseup', handleEnd);
 
+  // PC 마우스
+container.onmousedown = handleStart;
+window.onmousemove = handleMove;
+window.onmouseup = handleEnd;
+
+// 모바일 터치
 container.addEventListener('touchstart', (e) => {
     if (e.target.id === 'reset-btn') return;
     if (e.cancelable) e.preventDefault(); 
@@ -129,9 +133,7 @@ container.addEventListener('touchmove', (e) => {
     handleMove(e);
 }, { passive: false });
 
-container.addEventListener('touchend', (e) => {
-    handleEnd(e);
-});
+container.addEventListener('touchend', handleEnd);
 
 // 8. 충돌(합성) 로직
 Events.on(engine, 'collisionStart', (event) => {
