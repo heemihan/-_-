@@ -89,8 +89,9 @@ function getInputX(e) {
     }
     return clientX - rect.left;
 }
+container.style.touchAction = 'none';
 
-// 6. 조작 로직 (상태 잠금 및 모바일 최적화)
+// 6. 조작 로직 (Pointer Event 활용)
 
 function handleMove(e) {
     if (isDragging && currentFruit && !isGameOver) {
@@ -100,14 +101,14 @@ function handleMove(e) {
         
         // 벽 안쪽 제한 (40px ~ 360px 사이)
         x = Math.max(40 + radius, Math.min(360 - radius, x));
-       
+        
+        // 드래그 중에는 y 좌표를 고정하고 x만 이동
         Body.setPosition(currentFruit, { x: x, y: 80 });
     }
 }
 
 function handleStart(e) {
     if (e.target.id === 'reset-btn' || isGameOver || !canDrop || !currentFruit) return;
-    
     isDragging = true;
     handleMove(e); 
 }
@@ -120,38 +121,27 @@ function handleEnd(e) {
         playSound('sound-drop');
 
         currentFruit = null;
-        
         setTimeout(spawnFruit, 1000); 
     } else {
         isDragging = false;
     }
 }
 
-// 7. 이벤트 리스너 통합 관리 (중복 발생 및 유령 클릭 차단)
+// 7. 이벤트 리스너 통합 관리 (Pointer Events)
 
-// PC 마우스
-container.onmousedown = handleStart;
-window.onmousemove = handleMove;
-window.onmouseup = handleEnd;
-
-container.addEventListener('touchstart', (e) => {
-    if (e.target.id === 'reset-btn') return;
-    
-    if (e.cancelable) e.preventDefault(); 
-    
+container.addEventListener('pointerdown', (e) => {
+    container.setPointerCapture(e.pointerId); 
     handleStart(e);
-}, { passive: false });
+});
 
-container.addEventListener('touchmove', (e) => {
-    if (e.cancelable) e.preventDefault();
+container.addEventListener('pointermove', (e) => {
     handleMove(e);
-}, { passive: false });
+});
 
-container.addEventListener('touchend', (e) => {
+container.addEventListener('pointerup', (e) => {
+    container.releasePointerCapture(e.pointerId);
     handleEnd(e);
-}, { passive: false });
-
-
+});
 
 // 충돌 및 게임오버 로직 
 Events.on(engine, 'collisionStart', (event) => {
