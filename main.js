@@ -57,22 +57,15 @@ function createFruit(x, y, level, isStatic = false) {
 // 1. 과일 생성 함수 (안정성 강화)
 function spawnFruit() {
     if (isGameOver) return;
-    
     const level = Math.floor(Math.random() * 3) + 1;
-    // 무조건 isStatic: true로 생성 (공중 부양 상태)
     currentFruit = createFruit(200, 80, level, true);
     Composite.add(world, currentFruit);
-    
-    // 생성 직후 터치 실수를 막기 위해 0.2초 뒤에만 조작 가능하게 설정
     canDrop = false;
-    setTimeout(() => {
-        canDrop = true;
-    }, 200);
+    setTimeout(() => { canDrop = true; }, 200);
 }
 
 function getInputX(e) {
     const rect = container.getBoundingClientRect();
-    // PointerEvent는 clientX를 공통으로 사용합니다.
     return (e.clientX || (e.touches && e.touches[0].clientX)) - rect.left;
 }
 
