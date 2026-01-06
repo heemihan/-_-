@@ -15,7 +15,7 @@ const render = Render.create({
     }
 });
 
-// 벽 생성
+// 벽 및 설정
 const wallOptions = { isStatic: true, render: { visible: false } };
 const ground = Bodies.rectangle(200, 595, 400, 10, wallOptions);
 const leftWall = Bodies.rectangle(40, 300, 10, 600, wallOptions);
@@ -44,7 +44,7 @@ function createFruit(x, y, level, isStatic = false) {
 
     const fruit = Bodies.circle(x, y, fruitData.radius, {
         label: `fruit_${level}`,
-        isStatic: isStatic,
+        isStatic: isStatic, // 생성 시 true면 절대 안 떨어짐
         restitution: 0.3,
         render: {
             sprite: { texture: texturePath, xScale: 1, yScale: 1 }
@@ -54,26 +54,20 @@ function createFruit(x, y, level, isStatic = false) {
     return fruit;
 }
 
-// 과일 생성 함수 (중괄호 문제 수정됨)
+// 1. 과일 생성 함수 (안정성 강화)
 function spawnFruit() {
     if (isGameOver) return;
     
     const level = Math.floor(Math.random() * 3) + 1;
+    // 무조건 isStatic: true로 생성 (공중 부양 상태)
     currentFruit = createFruit(200, 80, level, true);
     Composite.add(world, currentFruit);
     
+    // 생성 직후 터치 실수를 막기 위해 0.2초 뒤에만 조작 가능하게 설정
     canDrop = false;
     setTimeout(() => {
         canDrop = true;
-    }, 200); // 생성 직후 오작동 방지를 위해 약간의 대기 시간 부여
-}
-
-function playSound(id) {
-    const sound = document.getElementById(id);
-    if (sound) {
-        sound.currentTime = 0;
-        sound.play().catch(() => {});
-    }
+    }, 200);
 }
 
 function getInputX(e) {
@@ -82,7 +76,7 @@ function getInputX(e) {
     return clientX - rect.left;
 }
 
-// 조작 로직
+// 2. 조작 로직 (상태 엄격 관리)
 function handleStart(e) {
     if (isGameOver || !canDrop || !currentFruit) return;
     isDragging = true;
@@ -97,6 +91,8 @@ function handleMove(e) {
     const radius = FRUITS[level - 1].radius;
     
     x = Math.max(40 + radius, Math.min(360 - radius, x));
+    
+    // 드래그 중에는 y좌표 80에 강제 고정
     Body.setPosition(currentFruit, { x: x, y: 80 });
 }
 
@@ -104,20 +100,28 @@ function handleEnd(e) {
     if (isDragging && currentFruit) {
         isDragging = false;
         canDrop = false; 
+        
+        // 오직 손을 뗄 때만 물리 엔진을 활성화(낙하)
         Body.setStatic(currentFruit, false);
         playSound('sound-drop');
+        
         currentFruit = null;
         setTimeout(spawnFruit, 1000); 
     }
 }
 
-// 이벤트 리스너 (spawnFruit 밖으로 분리)
+// 3. 이벤트 리스너 등록 (가장 중요: 중복 방지 및 캡처)
 container.style.touchAction = 'none'; 
 container.onpointerdown = handleStart;
 window.onpointermove = handleMove;
 window.onpointerup = handleEnd;
 
-// 충돌 로직
+// 4. 충돌 및 유틸리티 (기존과 동일)
+function playSound(id) {
+    const sound = document.getElementById(id);
+    if (sound) { sound.currentTime = 0; sound.play().catch(() => {}); }
+}
+
 Events.on(engine, 'collisionStart', (event) => {
     event.pairs.forEach((pair) => {
         const { bodyA, bodyB } = pair;
@@ -125,8 +129,7 @@ Events.on(engine, 'collisionStart', (event) => {
             if (bodyA.isMerging || bodyB.isMerging) return;
             const level = parseInt(bodyA.label.split('_')[1]);
             if (level < 11) {
-                bodyA.isMerging = true; 
-                bodyB.isMerging = true;
+                bodyA.isMerging = true; bodyB.isMerging = true;
                 const midX = (bodyA.position.x + bodyB.position.x) / 2;
                 const midY = (bodyA.position.y + bodyB.position.y) / 2;
                 playSound('sound-merge');
@@ -147,7 +150,6 @@ Events.on(engine, 'afterUpdate', () => {
             isGameOver = true;
             playSound('sound-gameover');
             document.getElementById('game-over').style.display = 'block';
-            document.getElementById('final-score').innerText = score;
         }
     }
 });
@@ -155,5 +157,4 @@ Events.on(engine, 'afterUpdate', () => {
 Render.run(render);
 Runner.run(Runner.create(), engine);
 spawnFruit();
-
 window.resetGame = function() { location.reload(); }
