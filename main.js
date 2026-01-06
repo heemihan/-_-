@@ -37,7 +37,7 @@ let score = 0;
 let isGameOver = false;
 let currentFruit = null;
 let canDrop = true;
-let isDragging = false;
+let isDragging = false; // 변수는 상단에 한 번만 선언합니다.
 
 // 4. 과일 생성 함수
 function createFruit(x, y, level, isStatic = false) {
@@ -76,18 +76,8 @@ function playSound(id) {
 
 function getInputX(e) {
     const rect = container.getBoundingClientRect();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    return clientX - rect.left;
-}
-
-// 6. 조작 로직 (터치 유지 시 이동, 떼면 낙하)
-let isDragging = false; 
-
-// 좌표 계산 함수 보강
-function getInputX(e) {
-    const rect = container.getBoundingClientRect();
-    // 터치 이벤트와 마우스 이벤트를 명확히 구분하여 좌표 추출
     let clientX;
+    // 터치와 마우스 좌표 통합 추출
     if (e.touches && e.touches.length > 0) {
         clientX = e.touches[0].clientX;
     } else {
@@ -96,71 +86,61 @@ function getInputX(e) {
     return clientX - rect.left;
 }
 
+// 6. 조작 로직 (터치 유지 시 이동, 떼면 낙하)
 function handleMove(e) {
     if (isDragging && currentFruit && !isGameOver) {
-        // 이동 중 브라우저 기본 동작(스크롤 등) 차단
-        if (e.cancelable) e.preventDefault();
-        
         let x = getInputX(e);
         const level = parseInt(currentFruit.label.split('_')[1]);
         const radius = FRUITS[level - 1].radius;
         
-        // 벽 안쪽 제한 (벽 두께 40px 기준)
+        // 벽 안쪽 제한 (벽 40, 360 고려)
         x = Math.max(40 + radius, Math.min(360 - radius, x));
         Body.setPosition(currentFruit, { x: x, y: 80 });
     }
 }
 
 function handleStart(e) {
-    // UI 버튼 클릭 시나 게임 상태에 따른 예외 처리
     if (e.target.id === 'reset-btn' || isGameOver || !canDrop) return;
-    
-    // 드래그 상태 시작
     isDragging = true;
-    handleMove(e); 
+    handleMove(e); // 터치한 순간 그 위치로 즉시 이동
 }
 
 function handleEnd(e) {
-    // 드래그 중인 상태에서 손을 뗄 때만 딱 한 번 실행
     if (isDragging && currentFruit) {
         isDragging = false;
-        canDrop = false; // 새로운 과일 생성 전까지 추가 입력 방지
+        canDrop = false; // 새로운 과일 생성 전까지 추가 드롭 방지
         
-        // 정적 상태 해제하여 물리 엔진(중력) 적용
+        // 손을 뗄 때 물리 엔진 활성화
         Body.setStatic(currentFruit, false);
-        
-        // 효과음 재생
         playSound('sound-drop');
 
         currentFruit = null;
-        // 1초 뒤 자동 생성
         setTimeout(spawnFruit, 1000); 
     }
 }
 
-// 7. 이벤트 리스너 통합 관리 (간섭 원천 차단)
+// 7. 이벤트 리스너 통합 관리 (중복 제거 및 최적화)
 
-// PC 마우스 (container에서 시작해서 window에서 끝냄)
+// PC 마우스
 container.addEventListener('mousedown', handleStart);
-window.addEventListener('mousemove', handleMove);
+window.addEventListener('mousemove', (e) => { if(isDragging) handleMove(e); });
 window.addEventListener('mouseup', handleEnd);
 
-// 모바일 터치 (가장 중요한 부분)
+// 모바일 터치
 container.addEventListener('touchstart', (e) => {
     if (e.target.id === 'reset-btn') return;
-    
-    // 이 한 줄이 터치 후 발생하는 mousedown/click 이벤트를 막아줍니다.
-    if (e.cancelable) e.preventDefault(); 
-    
+    if (e.cancelable) e.preventDefault(); // Ghost Click 방지
     handleStart(e);
 }, { passive: false });
 
-container.addEventListener('touchmove', handleMove, { passive: false });
+container.addEventListener('touchmove', (e) => {
+    if (e.cancelable) e.preventDefault();
+    handleMove(e);
+}, { passive: false });
 
 container.addEventListener('touchend', (e) => {
-    // 터치 종료 시 드롭 실행
     handleEnd(e);
-}, { passive: false });
+});
 
 // 8. 충돌(합성) 로직
 Events.on(engine, 'collisionStart', (event) => {
