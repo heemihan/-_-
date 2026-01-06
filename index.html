@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>수박 게임 - 성능 및 스킨 최적화본</title>
+    <title>수박 게임 - 스킨 최적화</title>
     <style>
         body {
             margin: 0; padding: 0;
@@ -13,6 +13,7 @@
             touch-action: none; overscroll-behavior: none;
         }
 
+        /* 메인 컨테이너: 하나만 존재해야 합니다 */
         #game-container {
             position: relative;
             width: 400px; height: 600px;
@@ -20,10 +21,11 @@
             border: 4px solid #333; border-radius: 12px;
             background-color: #ffeeb0;
             background-image: url('asset/background.png');
-            background-size: 100% 100%;
+            background-size: cover;
             overflow: hidden;
         }
 
+        /* UI 레이어: 게임 화면 위에 겹쳐짐 */
         #ui-layer {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             pointer-events: none; z-index: 100;
@@ -35,23 +37,24 @@
             text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
         }
 
-        #reset-btn {
+        /* 상단 버튼 그룹 */
+        .top-controls {
             position: absolute; top: 15px; right: 15px;
-            width: 40px; height: auto;
-            cursor: pointer; pointer-events: auto;
+            display: flex; gap: 10px;
+            pointer-events: auto; /* 버튼 클릭 가능하게 설정 */
             z-index: 101;
         }
 
-        /* 스킨 변경 버튼 스타일 */
-        .skin-controls {
-            position: absolute; bottom: 10px; left: 10px;
-            pointer-events: auto; z-index: 105;
-        }
-        .skin-controls button {
-            padding: 5px 10px; cursor: pointer; background: #333; color: white; border: none; border-radius: 5px;
+        .control-btn {
+            width: 40px; height: 40px; /* 크기 적정화 */
+            cursor: pointer;
+            transition: transform 0.1s;
         }
 
-        .game-over {
+        .control-btn:active { transform: scale(0.9); }
+
+        /* 게임 오버 팝업 */
+        #game-over {
             position: absolute; top: 50%; left: 50%;
             transform: translate(-50%, -50%);
             background: rgba(0, 0, 0, 0.85); color: white;
@@ -63,21 +66,27 @@
     </style>
 </head>
 <body>
-<div id="ui-container" style="position: absolute; top: 15px; right: 15px; z-index: 101; display: flex; align-items: center; gap: 10px;">
-    <img src="asset/imgchange.png" id="skin-btn" onclick="toggleSkin()" alt="Skin Change" style="width: 15px; height: auto; cursor: pointer;">
-    
-    <img src="asset/resetGame.png" id="reset-btn-img" onclick="resetGame()" alt="Reset" style="width: 15px; height: auto; cursor: pointer;">
-</div>
 
-<div id="game-container">
-    <div id="ui-layer">
-        <div class="score-board">SCORE: <span id="score">0</span></div>
-        </div>
-</div>
     <div id="game-container">
+        <div class="top-controls">
+            <img src="asset/imgchange.png" class="control-btn" onclick="toggleSkin()" alt="스킨변경">
+            <img src="asset/resetGame.png" class="control-btn" onclick="resetGame()" alt="다시시작">
+        </div>
+
         <div id="ui-layer">
             <div class="score-board">SCORE: <span id="score">0</span></div>
-            <img src="asset/resetGame.png" id="reset-btn" onclick="resetGame()" alt="Reset">
-            
-            <div class="skin-controls">
-                <button onclick="changeSkin('fruit')">기본</button
+        </div>
+
+        <div id="game-over">
+            <h1>GAME OVER</h1>
+            <p>최종 점수: <span id="final-score">0</span></p>
+            <button onclick="resetGame()" style="padding:10px 20px; cursor:pointer;">다시 도전</button>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+    <script>
+        // 이전에 정리해드린 통합 JS 코드를 여기에 넣으시면 됩니다.
+    </script>
+</body>
+</html>
