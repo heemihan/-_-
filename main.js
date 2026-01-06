@@ -90,10 +90,10 @@ function getInputX(e) {
     return clientX - rect.left;
 }
 
-// 6. 조작 로직 (상태 잠금 강화)
+// 6. 조작 로직 (상태 잠금 및 모바일 최적화)
 
 function handleMove(e) {
-   if (isDragging && currentFruit && !isGameOver) {
+    if (isDragging && currentFruit && !isGameOver) {
         let x = getInputX(e);
         const level = parseInt(currentFruit.label.split('_')[1]);
         const radius = FRUITS[level - 1].radius;
@@ -109,43 +109,46 @@ function handleStart(e) {
     if (e.target.id === 'reset-btn' || isGameOver || !canDrop || !currentFruit) return;
     
     isDragging = true;
-    handleMove(e);
+    handleMove(e); 
 }
 
 function handleEnd(e) {
- if (isDragging === true && currentFruit) {
-        isDragging = false; 
-        canDrop = false; 
-        
+    if (isDragging && currentFruit) {
+        isDragging = false;
+        canDrop = false;
         Body.setStatic(currentFruit, false);
         playSound('sound-drop');
 
-      currentFruit = null;
-      
-      currentFruit = null;
-        setTimeout(spawnFruit, 0); 
+        currentFruit = null;
+        
+        setTimeout(spawnFruit, 1000); 
     } else {
         isDragging = false;
     }
 }
 
-// 7. 이벤트 리스너 통합 관리 (가장 안전한 구조)
+// 7. 이벤트 리스너 통합 관리 (중복 발생 및 유령 클릭 차단)
 
-// PC용
+// PC 마우스
 container.onmousedown = handleStart;
 window.onmousemove = handleMove;
 window.onmouseup = handleEnd;
 
-// 모바일용
 container.addEventListener('touchstart', (e) => {
     if (e.target.id === 'reset-btn') return;
+    
     if (e.cancelable) e.preventDefault(); 
+    
     handleStart(e);
 }, { passive: false });
 
 container.addEventListener('touchmove', (e) => {
     if (e.cancelable) e.preventDefault();
     handleMove(e);
+}, { passive: false });
+
+container.addEventListener('touchend', (e) => {
+    handleEnd(e);
 }, { passive: false });
 
 
