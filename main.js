@@ -156,8 +156,12 @@ Events.on(engine, 'collisionStart', (event) => {
                 bodyB.isMerging = true;
                 const midX = (bodyA.position.x + bodyB.position.x) / 2;
                 const midY = (bodyA.position.y + bodyB.position.y) / 2;
-                Composite.remove(world, [bodyA, bodyB]);
-                Composite.add(world, createFruit(midX, midY, level + 1));
+                setTimeout(() => {
+                    Composite.remove(world, [bodyA, bodyB]);
+                    const nextFruit = createFruit(midX, midY, level + 1);
+                    Composite.add(world, nextFruit);
+                }, 0);
+
                 score += FRUITS[level - 1].score;
                 document.getElementById('score').innerText = score;
             }
