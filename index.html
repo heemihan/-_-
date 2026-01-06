@@ -3,23 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>수박 게임 - 통합 최적화</title>
+    <title>수박 게임 - 최종 수정본</title>
 </head>
 <body style="margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #1a1a1a; overflow: hidden; touch-action: none;">
 
-  <div id="game-outer" style="position: relative; width: 400px; height: 600px; margin: 0 auto; overflow: hidden;">
-    <div id="game-container" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1;"></div>
-    
-    <div id="top-controls" style="position: absolute; top: 15px; right: 15px; z-index: 100; display: flex;">
-        </div>
-</div>
+    <div id="game-outer" style="position: relative; width: 400px; height: 600px; background-color: #ffeeb0; border: 4px solid #333; border-radius: 12px; overflow: hidden;">
+        
+        <div id="game-container" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1;"></div>
+        
         <div id="score-board" style="position: absolute; top: 20px; left: 20px; color: #333; font-size: 24px; font-weight: 800; z-index: 100; pointer-events: none; font-family: sans-serif;">
             SCORE: <span id="score">0</span>
         </div>
         
-        <div id="top-controls" style="position: absolute; top: 15px; right: 15px; display: flex; gap: 10px; z-index: 101; align-items: center;">
+        <div id="ui-controls" style="position: absolute; top: 15px; right: 15px; display: flex; gap: 10px; z-index: 101; align-items: center;">
             <img src="asset/imgchange.png" id="skin-btn" onclick="toggleSkin()" alt="스킨변경" style="width: 40px; height: 40px; cursor: pointer; object-fit: contain;">
-            <img src="asset/resetGame.png" id="reset-btn" onclick="resetGame()" alt="다시시작" style="width: 40px; height: 40px; cursor: pointer; object-fit: contain;">
+            <img src="asset/resetGame.png" id="reset-btn" onclick="resetGame()" alt="다시시작" style="width: 34px; height: 40px; cursor: pointer; object-fit: contain;">
         </div>
 
         <div id="game-over" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; flex-direction: column; justify-content: center; align-items: center; color: white; z-index: 200; font-family: sans-serif;">
@@ -27,9 +25,7 @@
             <p style="font-size: 20px;">최종 점수: <span id="final-score">0</span></p>
             <button onclick="resetGame()" style="padding: 10px 20px; font-size: 16px; cursor: pointer; border-radius: 8px; border: none; background: #fff; color: #000; font-weight: bold;">다시 시작</button>
         </div>
-    </div>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+    </div> <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
     <script src="game.js"></script>
 </body>
 </html>
