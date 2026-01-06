@@ -44,7 +44,7 @@ function createFruit(x, y, level, isStatic = false) {
 
     const fruit = Bodies.circle(x, y, fruitData.radius, {
         label: `fruit_${level}`,
-        isStatic: isStatic, // 생성 시 true면 절대 안 떨어짐
+        isStatic: isStatic, 
         restitution: 0.3,
         render: {
             sprite: { texture: texturePath, xScale: 1, yScale: 1 }
@@ -93,13 +93,9 @@ const handleMove = (e) => {
 const handleEnd = (e) => {
     if (isDragging && currentFruit && canDrop) {
         isDragging = false;
-        canDrop = false; // 중복 낙하 방지
-        
-        // [여기서 낙하 실행]
+        canDrop = false;
         Body.setStatic(currentFruit, false); 
         currentFruit = null;
-        
-        // 1초 뒤 다음 과일 생성
         setTimeout(spawnFruit, 1000);
     }
 };
@@ -119,25 +115,29 @@ function playSound(id) {
     if (sound) { sound.currentTime = 0; sound.play().catch(() => {}); }
 }
 
-Events.on(engine, 'collisionStart', (event) => {
-    event.pairs.forEach((pair) => {
-        const { bodyA, bodyB } = pair;
-        if (bodyA.label && bodyB.label && bodyA.label.startsWith('fruit_') && bodyA.label === bodyB.label) {
-            if (bodyA.isMerging || bodyB.isMerging) return;
-            const level = parseInt(bodyA.label.split('_')[1]);
-            if (level < 11) {
-                bodyA.isMerging = true; bodyB.isMerging = true;
-                const midX = (bodyA.position.x + bodyB.position.x) / 2;
-                const midY = (bodyA.position.y + bodyB.position.y) / 2;
-                playSound('sound-merge');
-                Composite.remove(world, [bodyA, bodyB]);
-                Composite.add(world, createFruit(midX, midY, level + 1));
-                score += FRUITS[level - 1].score;
-                document.getElementById('score').innerText = score;
-            }
-        }
-    });
+Events.on(engine, 'beforeUpdate', () => {
+    if (isDragging && currentFruit) {
+        const currentX = currentFruit.position.x;
+        const newX = currentX + (targetX - currentX) * 0.2; 
+        
+        Body.setPosition(currentFruit, { x: newX, y: 80 });
+        Body.setVelocity(currentFruit, { x: 0, y: 0 });
+    }
 });
+
+const handleEnd = (e) => {
+    if (isDragging && currentFruit && canDrop) {
+        isDragging = false;
+        canDrop = false;
+
+        Body.setStatic(currentFruit, false);
+        Body.setVelocity(currentFruit, { x: 0, y: 0 });
+        Body.setAngularVelocity(currentFruit, 0);
+        
+        currentFruit = null;
+        setTimeout(spawnFruit, 1000);
+    }
+};
 
 Events.on(engine, 'afterUpdate', () => {
     if (isGameOver) return;
