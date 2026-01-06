@@ -9,21 +9,21 @@
 
     <div id="game-outer" style="position: relative; width: 400px; height: 600px; background-color: #ffeeb0; border: 4px solid #333; border-radius: 12px; overflow: hidden;">
         
+        <div id="game-container" style="position: absolute; top: 0; left: 0; width: 400px; height: 600px; z-index: 1;"></div>
+
         <div id="score-board" style="position: absolute; top: 20px; left: 20px; color: #333; font-size: 24px; font-weight: 800; z-index: 100; pointer-events: none; font-family: sans-serif;">
             SCORE: <span id="score">0</span>
         </div>
         
-        <div id="top-controls" style="position: absolute; top: 15px; right: 15px; display: flex; gap: 10px; z-index: 101;">
-            <img src="asset/imgchange.png" id="skin-btn" onclick="toggleSkin()" alt="스킨변경" style="width: 34px; height: 40px; cursor: pointer;">
-            <img src="asset/resetGame.png" id="reset-btn" onclick="resetGame()" alt="다시시작" style="width: 40px; height: 40px; cursor: pointer;">
+        <div id="top-controls" style="position: absolute; top: 15px; right: 15px; display: flex; gap: 10px; z-index: 101; align-items: center;">
+            <img src="asset/imgchange.png" id="skin-btn" onclick="toggleSkin()" alt="스킨변경" style="width: 40px; height: 40px; cursor: pointer; object-fit: contain;">
+            <img src="asset/resetGame.png" id="reset-btn" onclick="resetGame()" alt="다시시작" style="width: 40px; height: 40px; cursor: pointer; object-fit: contain;">
         </div>
-        
-        <div id="game-container" style="width: 400px; height: 600px;"></div>
 
         <div id="game-over" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; flex-direction: column; justify-content: center; align-items: center; color: white; z-index: 200; font-family: sans-serif;">
             <h1 style="margin: 0;">GAME OVER</h1>
             <p style="font-size: 20px;">최종 점수: <span id="final-score">0</span></p>
-            <button onclick="resetGame()" style="padding: 10px 20px; font-size: 16px; cursor: pointer; border-radius: 8px; border: none;">다시 시작</button>
+            <button onclick="resetGame()" style="padding: 10px 20px; font-size: 16px; cursor: pointer; border-radius: 8px; border: none; background: #fff; color: #000; font-weight: bold;">다시 시작</button>
         </div>
     </div>
 
