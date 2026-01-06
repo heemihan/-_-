@@ -3,12 +3,9 @@ const { Engine, Render, Runner, Bodies, Composite, Events, Body } = Matter;
 const engine = Engine.create();
 const world = engine.world;
 const container = document.getElementById('game-container');
-const outer = document.getElementById('game-outer');
 
-// 게임 설정 및 상태 변수
-const GAME_WIDTH = 400;
-const GAME_HEIGHT = 600;
-let currentSkinType = 'A'; // 'A' 또는 'B'
+// 상태 변수
+let currentSkinType = 'A'; 
 const mergeQueue = []; 
 let score = 0;
 let isGameOver = false;
@@ -22,39 +19,40 @@ const FRUITS = [
     { radius: 157.5, score: 1024 }, { radius: 187.5, score: 2048 }
 ];
 
-// 1. 렌더러 설정 (캔버스 크기 고정 및 배경 설정)
+// --- 1. 렌더러 설정 (배경 강제 지정) ---
 const render = Render.create({
     element: container,
     engine: engine,
     options: {
-        width: GAME_WIDTH,
-        height: GAME_HEIGHT,
+        width: 400,
+        height: 600,
         wireframes: false,
-        background: 'asset/background.png'
+        background: 'asset/background.png' // 투명 대신 배경 이미지 직접 지정
     }
 });
 
-// 2. 벽 생성 (화면 밖으로 배치하여 캐릭터가 끼지 않게 함)
+// --- 2. 벽 생성 (이 부분이 없으면 과일이 추락함) ---
 const wallOptions = { isStatic: true, render: { visible: false } };
 Composite.add(world, [
-    Bodies.rectangle(GAME_WIDTH / 2, GAME_HEIGHT + 15, GAME_WIDTH, 30, wallOptions), // 바닥
-    Bodies.rectangle(-15, GAME_HEIGHT / 2, 30, GAME_HEIGHT, wallOptions),           // 왼쪽
-    Bodies.rectangle(GAME_WIDTH + 15, GAME_HEIGHT / 2, 30, GAME_HEIGHT, wallOptions) // 오른쪽
+    Bodies.rectangle(200, 595, 400, 30, wallOptions), // 바닥
+    Bodies.rectangle(-15, 300, 30, 600, wallOptions), // 왼쪽 벽
+    Bodies.rectangle(415, 300, 30, 600, wallOptions)  // 오른쪽 벽
 ]);
 
-// 3. 캐릭터 생성 함수
+// --- 3. 과일 생성 함수 ---
 function createFruit(x, y, level, isStatic = false) {
     const fruitData = FRUITS[level - 1];
     const indexStr = String(level - 1).padStart(2, '0'); 
     const prefix = (currentSkinType === 'A') ? 'fruit' : 'skinB_fruit';
-    
+    const texturePath = `asset/${prefix}${indexStr}.png`; 
+
     const fruit = Bodies.circle(x, y, fruitData.radius, {
         label: `fruit_${level}`,
         isStatic: isStatic,
         restitution: 0.3,
         render: {
             sprite: {
-                texture: `asset/${prefix}${indexStr}.png`,
+                texture: texturePath,
                 xScale: 1,
                 yScale: 1
             }
@@ -64,39 +62,22 @@ function createFruit(x, y, level, isStatic = false) {
     return fruit;
 }
 
-function spawnFruit() {
-    if (isGameOver) return;
-    const level = Math.floor(Math.random() * 3) + 1;
-    currentFruit = createFruit(GAME_WIDTH / 2, 80, level, true);
-    Composite.add(world, currentFruit);
-    canDrop = true;
-}
-
-// 4. 조작 로직 (마우스/터치 이동 및 낙하)
+// --- 4. 조작 로직 (마우스 이동 및 클릭) ---
 const handleMove = (e) => {
     if (currentFruit && canDrop && !isGameOver) {
         const rect = container.getBoundingClientRect();
         const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-        
-        // 실제 캔버스 내부 좌표 계산
         let x = clientX - rect.left;
         
-        const level = parseInt(currentFruit.label.split('_')[1]);
-        const radius = FRUITS[level - 1].radius;
-        
-        // 벽 뚫기 방지 제한
-        x = Math.max(radius, Math.min(GAME_WIDTH - radius, x));
+        const radius = FRUITS[parseInt(currentFruit.label.split('_')[1]) - 1].radius;
+        x = Math.max(radius, Math.min(400 - radius, x));
         Body.setPosition(currentFruit, { x: x, y: 80 });
     }
 };
 
-outer.addEventListener('mousemove', handleMove);
-outer.addEventListener('touchmove', handleMove);
-
-outer.addEventListener('mousedown', (e) => {
-    // 버튼 클릭 시 낙하 방지
-    if (e.target.tagName === 'IMG' || e.target.tagName === 'BUTTON') return;
-    
+container.addEventListener('mousemove', handleMove);
+container.addEventListener('touchmove', handleMove);
+container.addEventListener('mousedown', () => {
     if (currentFruit && canDrop && !isGameOver) {
         canDrop = false;
         Body.setStatic(currentFruit, false);
@@ -105,7 +86,20 @@ outer.addEventListener('mousedown', (e) => {
     }
 });
 
-// 5. 물리 엔진 이벤트 (충돌 및 합성)
+// --- 5. 스킨 전환 ---
+window.toggleSkin = function() {
+    currentSkinType = (currentSkinType === 'A') ? 'B' : 'A';
+    const prefix = (currentSkinType === 'A') ? 'fruit' : 'skinB_fruit';
+    
+    Composite.allBodies(world).forEach(body => {
+        if (body.label && body.label.startsWith('fruit_')) {
+            const level = body.label.split('_')[1];
+            body.render.sprite.texture = `asset/${prefix}${String(level - 1).padStart(2, '0')}.png`;
+        }
+    });
+};
+
+// --- 6. 충돌 및 합성 처리 ---
 Events.on(engine, 'collisionStart', (event) => {
     event.pairs.forEach((pair) => {
         const { bodyA, bodyB } = pair;
@@ -115,63 +109,32 @@ Events.on(engine, 'collisionStart', (event) => {
             if (level < 11) {
                 bodyA.isMerging = true;
                 bodyB.isMerging = true;
-                mergeQueue.push({
-                    bodyA, bodyB, level,
-                    x: (bodyA.position.x + bodyB.position.x) / 2,
-                    y: (bodyA.position.y + bodyB.position.y) / 2
-                });
+                mergeQueue.push({ bodyA, bodyB, level, x: (bodyA.position.x + bodyB.position.x) / 2, y: (bodyA.position.y + bodyB.position.y) / 2 });
             }
         }
     });
 });
 
 Events.on(engine, 'afterUpdate', () => {
-    // 합성 처리
     while (mergeQueue.length > 0) {
         const { bodyA, bodyB, level, x, y } = mergeQueue.shift();
-        if (Composite.allBodies(world).includes(bodyA) && Composite.allBodies(world).includes(bodyB)) {
+        if (Composite.allBodies(world).includes(bodyA)) {
             Composite.remove(world, [bodyA, bodyB]);
             Composite.add(world, createFruit(x, y, level + 1));
             score += FRUITS[level - 1].score;
             document.getElementById('score').innerText = score;
         }
     }
-
-    // 게임오버 체크
-    if (isGameOver) return;
-    const fruits = Composite.allBodies(world).filter(b => b.label && b.label.startsWith('fruit_') && !b.isStatic);
-    for (let fruit of fruits) {
-        if (fruit.position.y < 100 && Math.abs(fruit.velocity.y) < 0.2) {
-            isGameOver = true;
-            document.getElementById('game-over').style.display = 'flex';
-            document.getElementById('final-score').innerText = score;
-        }
-    }
 });
-
-// 6. 스킨 및 리셋 기능
-window.toggleSkin = function() {
-    currentSkinType = (currentSkinType === 'A') ? 'B' : 'A';
-    const prefix = (currentSkinType === 'A') ? 'fruit' : 'skinB_fruit';
-    
-    // 이미 존재하는 과일들 이미지 교체
-    Composite.allBodies(world).forEach(body => {
-        if (body.label && body.label.startsWith('fruit_')) {
-            const level = body.label.split('_')[1];
-            body.render.sprite.texture = `asset/${prefix}${String(level - 1).padStart(2, '0')}.png`;
-        }
-    });
-
-    // 조준 중인 과일 이미지 교체
-    if (currentFruit) {
-        const level = currentFruit.label.split('_')[1];
-        currentFruit.render.sprite.texture = `asset/${prefix}${String(level - 1).padStart(2, '0')}.png`;
-    }
-};
-
-window.resetGame = () => location.reload();
 
 // 실행
 Render.run(render);
 Runner.run(Runner.create({ isFixed: true }), engine);
+
+function spawnFruit() {
+    if (isGameOver) return;
+    currentFruit = createFruit(200, 80, Math.floor(Math.random() * 3) + 1, true);
+    Composite.add(world, currentFruit);
+    canDrop = true;
+}
 spawnFruit();
