@@ -4,6 +4,8 @@ const engine = Engine.create();
 const world = engine.world;
 const container = document.getElementById('game-container');
 
+let currentSkinPrefix = "fruit";
+
 // 1. 렌더러 설정
 const render = Render.create({
     element: document.getElementById('game-container'),
