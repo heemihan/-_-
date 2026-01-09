@@ -13,10 +13,10 @@ let canDrop = true;
 const mergeQueue = [];
 
 const FRUITS = [
-    { radius: 17.5, score: 2 }, { radius: 25, score: 4 }, { radius: 34, score: 8 },
-    { radius: 42, score: 16 }, { radius: 54, score: 32 }, { radius: 66, score: 64 },
-    { radius: 78, score: 128 }, { radius: 94, score: 256 }, { radius: 110, score: 512 },
-    { radius: 126, score: 1024 }, { radius: 150, score: 2048 }
+    { radius: 17.5, score: 2 }, { radius: 25, score: 4 }, { radius: 29, score: 8 },
+    { radius: 37, score: 16 }, { radius: 46, score: 32 }, { radius: 54, score: 64 },
+    { radius: 65, score: 128 }, { radius: 77, score: 256 }, { radius: 88, score: 512 },
+    { radius: 105, score: 1024 }, { radius: 113, score: 2048 }
 ];
 
 const render = Render.create({
@@ -133,6 +133,8 @@ Events.on(engine, 'collisionStart', (event) => {
     });
 });
 
+let overTime = 0;
+
 Events.on(engine, 'afterUpdate', () => {
     while (mergeQueue.length > 0) {
         const { bodyA, bodyB, level, x, y } = mergeQueue.shift();
@@ -152,15 +154,27 @@ Events.on(engine, 'afterUpdate', () => {
         const fruits = Composite.allBodies(world).filter(b => 
             b.label && b.label.startsWith('fruit_') && !b.isStatic && b !== currentFruit
         );
+        
+        let isOverflowing = false;
+
         for (let fruit of fruits) {
-            const age = Date.now() - (fruit.spawnTime || 0);
-            if (age > 3500 && fruit.position.y < 100) {
-                if (Math.abs(fruit.velocity.y) < 0.1) {
-                    isGameOver = true;
-                    document.getElementById('final-score').innerText = score;
-                    document.getElementById('game-over').style.display = 'block';
-                }
+            // Y축 100 미만(상단)에 과일이 위치하는지 확인
+            if (fruit.position.y < 100) {
+                isOverflowing = true;
+                break;
             }
+        }
+
+        if (isOverflowing) {
+            overTime += 1; // 과일이 상단에 있으면 카운트 증가
+            // 약 2~3초간 계속 상단에 머물러 있을 때만 게임 오버 (60프레임 기준 120~180)
+            if (overTime > 150) { 
+                isGameOver = true;
+                document.getElementById('final-score').innerText = score;
+                document.getElementById('game-over').style.display = 'block';
+            }
+        } else {
+            overTime = 0; // 과일이 내려가면 카운트 초기화
         }
     }
 });
